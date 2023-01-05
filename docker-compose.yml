@@ -1,0 +1,13 @@
+version: '3.1'
+
+services:
+
+  db:
+    container_name: knostr-postgres
+    image: postgres:15.1-alpine
+    environment:
+      POSTGRES_DB: knostr
+      POSTGRES_USER: knostr
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5432:5432"

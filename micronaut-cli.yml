@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: com.neutrine.knostr
+testFramework: junit
+sourceLanguage: kotlin
+buildTool: gradle_kotlin
+features: [annotation-api, app-name, data, data-jdbc, graalvm, gradle, h2, http-client, jackson-databind, jdbc-hikari, junit, kotlin, kotlin-application, kotlin-build, logback, micronaut-build, netty-server, readme, shade, yaml]

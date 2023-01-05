@@ -1,0 +1,31 @@
+micronaut:
+  application:
+    name: knostr
+datasources:
+  default:
+    url: jdbc:postgresql://localhost:5432/knostr
+    username: knostr
+    password: root
+    driver-class-name: org.postgresql.Driver
+    dialect: POSTGRES
+    db-type: postgres
+
+jpa:
+  default:
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+
+logger:
+  levels:
+    io.micronaut.data.query: TRACE
+
+flyway:
+  datasources:
+    default:
+      enabled: true
+netty:
+  default:
+    allocator:
+      max-order: 3
