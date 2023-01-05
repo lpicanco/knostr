@@ -1,0 +1,9 @@
+{
+  "id": "9ac42650ace4ab2c8e09f68788ae8f20bf99a7389efd586aabb63d09da308643",
+  "pubkey": "c8e13d2334450c82eeca466b421828f66beb66c110ce596ea7dddc5cec45ad02",
+  "created_at": 1672578353,
+  "kind": 2,
+  "tags": [],
+  "content": "wss://nostr.drss.io",
+  "sig": "9205716d71f432350e65c136bfe1c06553a2ec077a02435aa70fdd3ce2882a07f26c89355b76d5c1368372f4dcd61520bc3ddac7cfe0993ff6fdf4b152dfac5c"
+}

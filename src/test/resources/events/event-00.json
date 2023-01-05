@@ -1,0 +1,9 @@
+{
+  "id": "b37a53adeb4d08207fc27d0a8022fd7edeecf1626a73816740fd0a48616581cc",
+  "pubkey": "2e9397a8c9268585668b76479f88e359d0ee261f8e8ea07b3b3450546d1601c8",
+  "created_at": 1672100059,
+  "kind": 0,
+  "tags": [],
+  "content": "{\"lud06\":\"\",\"display_name\":\"Luiz\",\"website\":\"\",\"name\":\"lpicanco\",\"about\":\"\",\"picture\":\"https:\\/\\/avatars.githubusercontent.com\\/u\\/8377\"}",
+  "sig": "dc73908266205b9dd7476343a905ffc1a82740f3f556c85461b5be81db80e2280c3e15c0d4fbe40405dc3f956f10480501191939526851a5437c108d3edcc09f"
+}
