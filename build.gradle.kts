@@ -5,6 +5,8 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("io.micronaut.application") version "3.6.7"
     id("com.google.cloud.tools.jib") version "3.3.1"
+    id("org.sonarqube") version "3.5.0.2730"
+    jacoco
 }
 
 version = "0.1"
@@ -82,6 +84,11 @@ tasks {
     compileTestKotlin {
         kotlinOptions {
             jvmTarget = "17"
+        }
+    }
+    jacocoTestReport {
+        reports {
+            xml.required.set(true)
         }
     }
 }
