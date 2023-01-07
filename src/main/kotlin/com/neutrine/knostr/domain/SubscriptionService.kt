@@ -37,6 +37,10 @@ class SubscriptionService(
         )
     }
 
+    fun exists(subscription: Subscription): Boolean {
+        return subscriptions.contains(subscription)
+    }
+
     fun unsubscribe(subscriptionId: String, session: WebSocketSession) {
         subscriptions.filter { it.id == subscriptionId && it.socketSession.id == session.id }
             .forEach { subscriptions.remove(it) }

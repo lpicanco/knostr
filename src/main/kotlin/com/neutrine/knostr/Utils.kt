@@ -1,7 +1,6 @@
 package com.neutrine.knostr
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.neutrine.knostr.Utils.MESSAGE_DIGEST
 import java.math.BigInteger
 import java.security.MessageDigest
@@ -16,7 +15,7 @@ object Utils {
         return buf
     }
 
-    val objectMapper = ObjectMapper().registerKotlinModule()
+    val objectMapper = jacksonObjectMapper()
     val MESSAGE_DIGEST: MessageDigest = MessageDigest.getInstance("SHA-256")
 }
 
