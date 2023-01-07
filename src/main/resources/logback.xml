@@ -15,8 +15,6 @@
         </encoder>
     </appender>
 
-    <logger name="io.micronaut.data.query" level="trace" />
-
 
     <root level="INFO">
 <!--        <appender-ref ref="STDOUTJson" />-->
