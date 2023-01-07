@@ -59,6 +59,7 @@ dependencies {
     testCompileOnly("org.junit.jupiter:junit-jupiter-params:5.9.0")
     testImplementation("io.mockk:mockk:1.13.3")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    testImplementation("org.testcontainers:postgresql:1.17.6")
 }
 
 application {
