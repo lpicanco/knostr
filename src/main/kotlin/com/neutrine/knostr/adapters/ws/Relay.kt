@@ -7,6 +7,8 @@ import com.neutrine.knostr.domain.EventFilter
 import com.neutrine.knostr.domain.EventService
 import com.neutrine.knostr.domain.SubscriptionService
 import com.neutrine.knostr.infra.CoroutineScopeFactory.Companion.COROUTINE_MESSAGE_HANDLER
+import io.micronaut.http.annotation.Header
+import io.micronaut.http.annotation.Produces
 import io.micronaut.websocket.WebSocketSession
 import io.micronaut.websocket.annotation.OnClose
 import io.micronaut.websocket.annotation.OnMessage
@@ -29,8 +31,13 @@ class Relay(
     private val logger = KotlinLogging.logger {}
 
     @OnOpen
-    fun onOpen(session: WebSocketSession) {
-        logger.info("onOpen", kv("sessionId", session.id))
+    @Produces("application/nostr+json")
+    fun onOpen(session: WebSocketSession?, @Header accept: String?): String? {
+        return when {
+            session != null -> null
+            accept == "application/nostr+json" -> NIP11_DATA
+            else -> "Use a Nostr client or Websocket client to connect"
+        }
     }
 
     @OnMessage
@@ -82,5 +89,9 @@ class Relay(
     fun onClose(session: WebSocketSession) {
         subscriptionService.unsubscribeSocketSession(session)
         logger.info("close", kv("sessionId", session.id))
+    }
+
+    companion object {
+        val NIP11_DATA = Relay::class.java.getResource("/nip-11.json").readText()
     }
 }

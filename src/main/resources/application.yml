@@ -1,6 +1,19 @@
 micronaut:
   application:
     name: knostr
+  metrics:
+    enabled: true
+    export:
+      newrelic:
+        enabled: false
+  otel:
+    enabled: false
+
+endpoints:
+  all:
+    port: 8082
+    sensitive: false
+
 datasources:
   default:
     url: jdbc:postgresql://localhost:5432/knostr
@@ -19,7 +32,7 @@ jpa:
 
 logger:
   levels:
-    io.micronaut.data.query: TRACE
+    io.micronaut.data.query: INFO
 
 flyway:
   datasources:
