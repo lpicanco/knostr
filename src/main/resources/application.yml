@@ -3,9 +3,6 @@ micronaut:
     name: knostr
   metrics:
     enabled: true
-    export:
-      newrelic:
-        enabled: false
   otel:
     enabled: false
 

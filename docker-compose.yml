@@ -1,7 +1,5 @@
 version: '3.1'
-
 services:
-
   db:
     container_name: knostr-postgres
     image: postgres:15.1-alpine

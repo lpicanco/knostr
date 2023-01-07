@@ -1,9 +1,10 @@
 plugins {
-    id("org.jetbrains.kotlin.jvm") version "1.6.21"
-    id("org.jetbrains.kotlin.kapt") version "1.6.21"
-    id("org.jetbrains.kotlin.plugin.allopen") version "1.6.21"
+    id("org.jetbrains.kotlin.jvm") version "1.8.0"
+    id("org.jetbrains.kotlin.kapt") version "1.8.0"
+    id("org.jetbrains.kotlin.plugin.allopen") version "1.8.0"
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("io.micronaut.application") version "3.6.7"
+    id("com.google.cloud.tools.jib") version "3.3.1"
 }
 
 version = "0.1"
@@ -26,13 +27,21 @@ dependencies {
     annotationProcessor("io.micronaut.data:micronaut-data-processor")
     runtimeOnly("org.postgresql:postgresql")
     implementation("io.micronaut.flyway:micronaut-flyway")
+
+    implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry-http")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    implementation("io.micronaut:micronaut-management")
+    implementation("io.micronaut.micrometer:micronaut-micrometer-core")
+    annotationProcessor("io.micronaut.micrometer:micronaut-micrometer-annotation")
+    annotationProcessor("io.micronaut.tracing:micronaut-tracing-opentelemetry-annotation")
+
     implementation("jakarta.annotation:jakarta.annotation-api")
     implementation("jakarta.persistence:jakarta.persistence-api:3.1.0")
 
     implementation("jakarta.annotation:jakarta.annotation-api")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.6.4")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
@@ -48,6 +57,8 @@ dependencies {
     implementation("io.micronaut:micronaut-validation")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     testCompileOnly("org.junit.jupiter:junit-jupiter-params:5.9.0")
+    testImplementation("io.mockk:mockk:1.13.3")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
 }
 
 application {
@@ -55,6 +66,10 @@ application {
 }
 java {
     sourceCompatibility = JavaVersion.toVersion("17")
+}
+
+allOpen {
+    annotations("io.micronaut.aop.Around", "jakarta.inject.Singleton")
 }
 
 tasks {
