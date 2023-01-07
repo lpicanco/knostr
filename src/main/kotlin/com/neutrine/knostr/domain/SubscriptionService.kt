@@ -1,8 +1,10 @@
 package com.neutrine.knostr.domain
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.neutrine.knostr.adapters.repository.jdbc.EventStorePostgres
+import com.neutrine.knostr.adapters.repository.EventStore
 import com.neutrine.knostr.adapters.ws.MessageSender
+import io.micrometer.core.instrument.MeterRegistry
+import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.inject.Singleton
 import kotlinx.coroutines.Job
@@ -12,13 +14,16 @@ import java.util.Collections
 @Singleton
 class SubscriptionService(
     private val objectMapper: ObjectMapper,
-    private val eventRepository: EventStorePostgres,
-    private val messageSender: MessageSender
+    private val eventRepository: EventStore,
+    private val messageSender: MessageSender,
+    private val meterRegistry: MeterRegistry
 ) {
     private val subscriptions: MutableList<Subscription> = Collections.synchronizedList(mutableListOf())
 
+    @NewSpan("subscribe")
     suspend fun subscribe(subscriptionId: String, session: WebSocketSession, filters: Set<EventFilter>) {
         subscriptions.add(Subscription(subscriptionId, session, filters))
+        meterRegistry.counter(EVENT_SUBSCRIPTION_METRICS).increment()
 
         eventRepository.filter(filters)
             .map { sendEvent(it, subscriptionId, session) }
@@ -64,6 +69,10 @@ class SubscriptionService(
             ),
             session
         )
+    }
+
+    companion object {
+        const val EVENT_SUBSCRIPTION_METRICS = "event.subscription"
     }
 }
 
