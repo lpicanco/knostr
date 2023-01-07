@@ -18,7 +18,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
-      - run: ./gradlew jacocoTestReport --no-daemon
+      - run: ./gradlew build jacocoTestReport --no-daemon
       - name: Analyze with SonarCloud
         uses: SonarSource/sonarcloud-github-action@de2e56b42aa84d0b1c5b622644ac17e505c9a049
         env:
