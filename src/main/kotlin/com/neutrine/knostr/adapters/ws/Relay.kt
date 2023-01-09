@@ -9,12 +9,15 @@ import com.neutrine.knostr.domain.SubscriptionService
 import com.neutrine.knostr.infra.CoroutineScopeFactory.Companion.COROUTINE_MESSAGE_HANDLER
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Produces
+import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import io.micronaut.websocket.annotation.OnClose
+import io.micronaut.websocket.annotation.OnError
 import io.micronaut.websocket.annotation.OnMessage
 import io.micronaut.websocket.annotation.OnOpen
 import io.micronaut.websocket.annotation.ServerWebSocket
 import jakarta.inject.Named
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
@@ -41,7 +44,8 @@ class Relay(
     }
 
     @OnMessage
-    fun onMessage(message: String, session: WebSocketSession) = coroutineScope.launch {
+    @NewSpan("onMessage")
+    fun onMessage(message: String, session: WebSocketSession) = coroutineScope.launch(errorHandler) {
         val messageArguments = objectMapper.readTree(message)
         if (messageArguments.size() < 2) {
             throw IllegalArgumentException("Invalid message: $message")
@@ -52,6 +56,15 @@ class Relay(
             "EVENT" -> processEvent(messageArguments[1], session)
             "CLOSE" -> unsubscribe(messageArguments[1].asText(), session)
             else -> throw IllegalArgumentException("Unsupported message: $message")
+        }
+    }
+
+    @OnError
+    fun onError(session: WebSocketSession, t: Throwable) {
+        logger.error("Unexpected error", kv("sessionId", session.id), t)
+
+        if (session.isOpen) {
+            session.close()
         }
     }
 
@@ -71,12 +84,14 @@ class Relay(
         logger.info("subscribe", kv("subscriptionId", subscriptionId), kv("filters", filters))
     }
 
-    private fun processEvent(eventNode: JsonNode, session: WebSocketSession) {
+    private suspend fun processEvent(eventNode: JsonNode, session: WebSocketSession) {
         val event = objectMapper.treeToValue(eventNode, Event::class.java)
         val result = eventService.save(event, session)
 
         if (logger.isDebugEnabled) {
             logger.debug("processEvent", kv("event", event), kv("result", result), kv("sessionId", session.id))
+        } else {
+            logger.info("processEvent", kv("eventId", event.id), kv("result", result), kv("sessionId", session.id))
         }
     }
 
@@ -89,6 +104,10 @@ class Relay(
     fun onClose(session: WebSocketSession) {
         subscriptionService.unsubscribeSocketSession(session)
         logger.info("close", kv("sessionId", session.id))
+    }
+
+    val errorHandler = CoroutineExceptionHandler { _, exception ->
+        logger.error("Unexpected error", exception)
     }
 
     companion object {

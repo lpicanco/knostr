@@ -72,7 +72,7 @@ java {
 }
 
 allOpen {
-    annotations("io.micronaut.aop.Around", "jakarta.inject.Singleton")
+    annotations("io.micronaut.aop.Around", "jakarta.inject.Singleton", "io.micronaut.websocket.annotation.ServerWebSocket")
 }
 
 tasks {

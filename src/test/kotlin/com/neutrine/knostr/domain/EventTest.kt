@@ -96,6 +96,22 @@ class EventTest {
         assertEquals(expected, event.copy(kind = kind).shouldBeDeleted())
     }
 
+    @ParameterizedTest
+    @CsvSource(
+        "0, true",
+        "1, false",
+        "2, false",
+        "3, true",
+        "4, false",
+        "5, false",
+        "6, false",
+        "7, false"
+    )
+    fun `should return if an event should be overwritten`(kind: Int, expected: Boolean) {
+        val event = createEvent()
+        assertEquals(expected, event.copy(kind = kind).shouldOverwrite())
+    }
+
     @Test
     fun `should return a list of referenced events`() {
         val event = createEvent().copy(

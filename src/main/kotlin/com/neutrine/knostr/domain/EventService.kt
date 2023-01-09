@@ -3,8 +3,6 @@ package com.neutrine.knostr.domain
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.neutrine.knostr.adapters.repository.EventStore
 import com.neutrine.knostr.adapters.ws.MessageSender
-import com.neutrine.knostr.domain.CommandResult.Companion.duplicated
-import com.neutrine.knostr.domain.CommandResult.Companion.ok
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
@@ -18,33 +16,41 @@ class EventService(
     private val meterRegistry: MeterRegistry
 ) {
     @NewSpan("save-event")
-    fun save(event: Event, session: WebSocketSession): CommandResult {
+    suspend fun save(event: Event, session: WebSocketSession): CommandResult {
         val result = if (!event.hasValidId()) {
             CommandResult(event.id, false, "invalid: event id does not match")
         } else if (!event.hasValidSignature()) {
             CommandResult(event.id, false, "invalid: event signature verification failed")
+        } else if (eventStore.existsById(event.id)) {
+            CommandResult.duplicated(event)
         } else {
-            val eventExists = eventStore.existsById(event.id)
-
-            if (!eventExists) {
-                eventStore.save(event)
-                if (event.shouldBeDeleted()) {
-                    deleteEvent(event)
-                }
-
-                subscriptionService.notify(event, session)
-                meterRegistry.counter(EVENT_SAVED_METRICS).increment()
+            when {
+                event.shouldBeDeleted() -> handleDelete(event)
+                event.shouldOverwrite() -> handleOverwrite(event)
+                else -> handleSave(event)
             }
 
-            if (eventExists) duplicated(event) else ok(event)
+            subscriptionService.notify(event, session)
+            CommandResult.ok(event)
         }
 
         messageSender.send(result.toJson(), session)
         return result
     }
 
-    private fun deleteEvent(event: Event) {
+    private suspend fun handleOverwrite(event: Event) {
+        handleSave(event)
+        eventStore.deleteOldestOfKind(event.pubkey, event.kind)
+    }
+
+    private fun handleDelete(event: Event) {
+        handleSave(event)
         eventStore.deleteAll(event.pubkey, event.referencedEventIds())
+    }
+
+    private fun handleSave(event: Event) {
+        eventStore.save(event)
+        meterRegistry.counter(EVENT_SAVED_METRICS).increment()
     }
 
     companion object {

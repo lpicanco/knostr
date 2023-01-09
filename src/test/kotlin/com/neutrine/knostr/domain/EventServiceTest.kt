@@ -7,6 +7,8 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.Called
 import io.mockk.clearAllMocks
+import io.mockk.coVerify
+import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.excludeRecords
 import io.mockk.impl.annotations.InjectMockKs
@@ -14,6 +16,7 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -43,7 +46,7 @@ class EventServiceTest {
     }
 
     @Test
-    fun `should save a new event`() {
+    fun `should save a new event`() = runTest {
         val event = createEvent()
         val session = mockk<WebSocketSession>()
         every { eventStore.existsById(event.id) } returns false
@@ -57,10 +60,12 @@ class EventServiceTest {
 
         assertEquals(expectedResult, result)
         assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
+
+        confirmVerified()
     }
 
     @Test
-    fun `should delete a event`() {
+    fun `should delete a event`() = runTest {
         val event = createEvent("/events/event-05.json")
         val session = mockk<WebSocketSession>()
 
@@ -74,6 +79,27 @@ class EventServiceTest {
 
         assertEquals(expectedResult, result)
         assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
+
+        confirmVerified()
+    }
+
+    @Test
+    fun `should overwrite a event`() = runTest {
+        val event = createEvent("/events/event-00.json")
+        val session = mockk<WebSocketSession>()
+
+        val result = eventService.save(event, session)
+        val expectedResult = CommandResult(event.id, true)
+
+        verify { eventStore.save(event) }
+        coVerify { eventStore.deleteOldestOfKind(event.pubkey, event.kind) }
+        verify { subscriptionService.notify(event, session) }
+        verify { messageSender.send(expectedResult.toJson(), session) }
+
+        assertEquals(expectedResult, result)
+        assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
+
+        confirmVerified()
     }
 
     @ParameterizedTest
@@ -85,7 +111,7 @@ class EventServiceTest {
             "/events/event-05.json",
         ]
     )
-    fun `should not save an existing event`(eventFile: String) {
+    fun `should not save an existing event`(eventFile: String) = runTest {
         val event = createEvent(eventFile)
         val session = mockk<WebSocketSession>()
         every { eventStore.existsById(event.id) } returns true
@@ -99,10 +125,12 @@ class EventServiceTest {
 
         assertEquals(expectedResult, result)
         assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
+
+        confirmVerified()
     }
 
     @Test
-    fun `should not save an event with invalid id`() {
+    fun `should not save an event with invalid id`() = runTest {
         val event = createEvent().copy(id = "invalid")
         val session = mockk<WebSocketSession>()
 
@@ -118,7 +146,7 @@ class EventServiceTest {
     }
 
     @Test
-    fun `should not save an event with invalid signature`() {
+    fun `should not save an event with invalid signature`() = runTest {
         val event = createEvent().copy(sig = "b532c4890c8c9c60db2009995dec2b8c17be35cb01b0733765285ff06fa373a75654e4dee65668cbd1fea56649475211b0210e54c0897b7fa607b965b7f94d03")
         val session = mockk<WebSocketSession>()
 

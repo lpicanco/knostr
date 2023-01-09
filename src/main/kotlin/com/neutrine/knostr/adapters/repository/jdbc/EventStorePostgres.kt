@@ -9,6 +9,7 @@ import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.jdbc.runtime.JdbcOperations
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.CrudRepository
+import io.micronaut.tracing.annotation.ContinueSpan
 import io.micronaut.transaction.SynchronousTransactionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.asFlow
@@ -25,6 +26,7 @@ abstract class EventStorePostgres(
     private val transactionManager: SynchronousTransactionManager<Connection>
 ) : EventStore, CrudRepository<Event, String> {
 
+    @ContinueSpan
     override suspend fun filter(filters: Set<EventFilter>): List<Event> {
         return filters.asFlow().flatMapMerge {
             flow { emit(filter(it)) }
@@ -32,7 +34,26 @@ abstract class EventStorePostgres(
     }
 
     @Query("UPDATE event SET deleted = true WHERE pubkey = :pubkey AND event_id in (:eventIds)")
+    @ContinueSpan
     abstract override fun deleteAll(pubkey: String, eventIds: Set<String>)
+
+    @ContinueSpan
+    override suspend fun deleteOldestOfKind(pubkey: String, kind: Int) {
+        val sql = "UPDATE event SET deleted = true WHERE pubkey = ? AND kind = ? AND deleted = false AND created_at < (SELECT MAX(created_at) FROM event WHERE pubkey = ? AND kind = ? AND deleted = false)"
+
+        withContext(Dispatchers.IO) {
+            transactionManager.executeWrite() {
+                jdbcOperations.prepareStatement(sql) { stmt ->
+                    stmt.setString(1, pubkey)
+                    stmt.setInt(2, kind)
+                    stmt.setString(3, pubkey)
+                    stmt.setInt(4, kind)
+
+                    stmt.executeUpdate()
+                }
+            }
+        }
+    }
 
     private suspend fun filter(filter: EventFilter): List<Event> {
         val predicates = mutableListOf("deleted = false")
