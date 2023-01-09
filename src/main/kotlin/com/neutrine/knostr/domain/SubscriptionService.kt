@@ -9,7 +9,7 @@ import io.micronaut.websocket.WebSocketSession
 import jakarta.inject.Singleton
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 @Singleton
 class SubscriptionService(
@@ -18,11 +18,11 @@ class SubscriptionService(
     private val messageSender: MessageSender,
     private val meterRegistry: MeterRegistry
 ) {
-    private val subscriptions: MutableList<Subscription> = Collections.synchronizedList(mutableListOf())
+    private val subscriptions: MutableMap<String, Subscription> = ConcurrentHashMap()
 
     @NewSpan("subscribe")
     suspend fun subscribe(subscriptionId: String, session: WebSocketSession, filters: Set<EventFilter>) {
-        subscriptions.add(Subscription(subscriptionId, session, filters))
+        subscriptions[getKey(subscriptionId, session)] = Subscription(subscriptionId, session, filters)
         meterRegistry.counter(EVENT_SUBSCRIPTION_METRICS).increment()
 
         eventRepository.filter(filters)
@@ -38,21 +38,20 @@ class SubscriptionService(
     }
 
     fun exists(subscription: Subscription): Boolean {
-        return subscriptions.contains(subscription)
+        val found = subscriptions[getKey(subscription.id, subscription.socketSession)]
+        return found != null && found.filters == subscription.filters
     }
 
     fun unsubscribe(subscriptionId: String, session: WebSocketSession) {
-        subscriptions.filter { it.id == subscriptionId && it.socketSession.id == session.id }
-            .forEach { subscriptions.remove(it) }
+        subscriptions.remove(getKey(subscriptionId, session))
     }
 
     fun unsubscribeSocketSession(session: WebSocketSession) {
-        subscriptions.filter { it.socketSession.id == session.id }
-            .forEach { subscriptions.remove(it) }
+        getSubscriptions(session).forEach { unsubscribe(it.id, session) }
     }
 
     fun notify(event: Event, session: WebSocketSession) {
-        subscriptions.filter { subscription ->
+        subscriptions.values.filter { subscription ->
             subscription.socketSession.id != session.id && subscription.socketSession.isOpen &&
                 subscription.filters.any { it.test(event) }
         }.map { subscription ->
@@ -60,10 +59,18 @@ class SubscriptionService(
         }
     }
 
+    private fun getSubscriptions(session: WebSocketSession): List<Subscription> {
+        return subscriptions.values.filter { it.socketSession == session }
+    }
+
     private fun createEventMessage(event: Event, subscriptionId: String): String {
         return objectMapper.writeValueAsString(
             listOf("EVENT", subscriptionId, event)
         )
+    }
+
+    private fun getKey(subscriptionId: String, session: WebSocketSession): String {
+        return "$subscriptionId-${session.id}"
     }
 
     private fun sendEvent(event: Event, subscriptionId: String, session: WebSocketSession): Job {

@@ -69,6 +69,24 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    fun `should not duplicate subscriptions`() = runTest {
+        val subId = "sub42"
+        val filters01 = setOf(EventFilter(since = 42))
+        val filters02 = setOf(EventFilter(since = 43))
+
+        val events = listOf(createEvent("/events/event-00.json"), createEvent("/events/event-01.json"))
+
+        coEvery { eventRepository.filter(any()) } returns events
+        every { messageSender.send(any(), any()) } returns Job().also { it.complete() }
+
+        subscriptionService.subscribe(subId, session, filters01)
+        subscriptionService.subscribe(subId, session, filters02)
+
+        assertFalse(subscriptionService.exists(Subscription(subId, session, filters01)))
+        assertTrue(subscriptionService.exists(Subscription(subId, session, filters02)))
+    }
+
+    @Test
     fun `should return if subscription exists`() = runTest {
         val subscription = Subscription("sub42", session, setOf(EventFilter(since = 42)))
         assertFalse(subscriptionService.exists(subscription))
@@ -130,8 +148,8 @@ class SubscriptionServiceTest {
         subscriptionService.notify(event, eventSession)
 
         verifySequence {
-            messageSender.send("""["EVENT","sub42",${objectMapper.writeValueAsString(event)}]""", session)
             messageSender.send("""["EVENT","sub43",${objectMapper.writeValueAsString(event)}]""", session02)
+            messageSender.send("""["EVENT","sub42",${objectMapper.writeValueAsString(event)}]""", session)
         }
     }
 }
