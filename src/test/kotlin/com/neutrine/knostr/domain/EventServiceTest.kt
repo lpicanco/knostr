@@ -6,6 +6,7 @@ import com.neutrine.knostr.createEvent
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.Called
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.excludeRecords
 import io.mockk.impl.annotations.InjectMockKs
@@ -37,6 +38,7 @@ class EventServiceTest {
     @BeforeEach
     fun setUp() {
         meterRegistry.clear()
+        clearAllMocks()
         excludeRecords { eventStore.existsById(any()) }
     }
 
