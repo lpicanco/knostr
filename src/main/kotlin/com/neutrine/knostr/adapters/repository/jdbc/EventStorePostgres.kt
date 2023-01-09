@@ -4,6 +4,7 @@ import com.neutrine.knostr.adapters.repository.EventStore
 import com.neutrine.knostr.domain.Event
 import com.neutrine.knostr.domain.EventFilter
 import io.micronaut.context.annotation.Primary
+import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.jdbc.runtime.JdbcOperations
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -30,8 +31,11 @@ abstract class EventStorePostgres(
         }.toList().flatten()
     }
 
+    @Query("UPDATE event SET deleted = true WHERE pubkey = :pubkey AND event_id in (:eventIds)")
+    abstract override fun deleteAll(pubkey: String, eventIds: Set<String>)
+
     private suspend fun filter(filter: EventFilter): List<Event> {
-        val predicates = mutableListOf<String>()
+        val predicates = mutableListOf("deleted = false")
         val parameters = mutableListOf<Any>()
 
         if (filter.since != null) {
@@ -76,10 +80,7 @@ abstract class EventStorePostgres(
             }
         }
 
-        val predicatesSql = if (predicates.isNotEmpty()) {
-            predicates.joinToString(" AND ", prefix = "WHERE ")
-        } else ""
-
+        val predicatesSql = predicates.joinToString(" AND ", prefix = "WHERE ")
         val query = "SELECT * FROM event $predicatesSql ORDER BY created_at DESC LIMIT ? "
 
         parameters.add(minOf(10_000, filter.limit))

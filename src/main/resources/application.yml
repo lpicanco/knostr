@@ -1,6 +1,10 @@
 micronaut:
   application:
     name: knostr
+  server:
+    idle-timeout: 30m
+    cors:
+      enabled: true
   metrics:
     enabled: true
   otel:
@@ -35,7 +39,3 @@ flyway:
   datasources:
     default:
       enabled: true
-netty:
-  default:
-    allocator:
-      max-order: 3

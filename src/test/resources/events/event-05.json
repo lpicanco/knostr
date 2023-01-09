@@ -1,0 +1,15 @@
+{
+  "id": "61c04b748550fb1f346c84a75b42dbafec8790a14ec6e6cd3bddd296da290222",
+  "pubkey": "a91bce0963aa79219e5886caa2f2bdf62868b8b971cef45d080fa85f6156cae9",
+  "content": "",
+  "created_at": 1673267724,
+  "kind": 5,
+  "tags": [
+    [
+      "e",
+      "2b2d5d3c92c4daa111f60503273dc5594f8147a59a4e2b48bb847cd38be1a1be"
+    ]
+  ],
+  "sig": "0ca89496f5e551bcdb55561506fc501a10f90356444f56840b7cb6841c0107aa559f98abe1331c51d86f8af55c0b6c3169f4c77426a2ad5bbb57e3e403077bf2"
+}
+

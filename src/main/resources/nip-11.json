@@ -3,7 +3,7 @@
   "name": "knostr",
   "description": "knostr relay",
   "pubkey": "5301220300157e89a9d1c2b947bb50f615baf3e8b89aaac0ec303ef37d4c05fd",
-  "supported_nips": [1,2,4,11,12,15,20,28],
+  "supported_nips": [1,2,4,9,11,12,15,20,28],
   "software": "https://github.com/lpicanco/knostr",
-  "version": "0.1"
+  "version": "0.2"
 }

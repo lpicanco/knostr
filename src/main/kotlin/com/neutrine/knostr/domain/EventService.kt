@@ -3,6 +3,8 @@ package com.neutrine.knostr.domain
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.neutrine.knostr.adapters.repository.EventStore
 import com.neutrine.knostr.adapters.ws.MessageSender
+import com.neutrine.knostr.domain.CommandResult.Companion.duplicated
+import com.neutrine.knostr.domain.CommandResult.Companion.ok
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
@@ -26,15 +28,23 @@ class EventService(
 
             if (!eventExists) {
                 eventStore.save(event)
+                if (event.shouldBeDeleted()) {
+                    deleteEvent(event)
+                }
+
                 subscriptionService.notify(event, session)
                 meterRegistry.counter(EVENT_SAVED_METRICS).increment()
             }
 
-            CommandResult(event.id, true, if (eventExists) "duplicate:" else "")
+            if (eventExists) duplicated(event) else ok(event)
         }
 
         messageSender.send(result.toJson(), session)
         return result
+    }
+
+    private fun deleteEvent(event: Event) {
+        eventStore.deleteAll(event.pubkey, event.referencedEventIds())
     }
 
     companion object {
@@ -47,5 +57,10 @@ data class CommandResult(val eventId: String, val result: Boolean, val descripti
         return jacksonObjectMapper().writeValueAsString(
             listOf("OK", eventId, result, description)
         )
+    }
+
+    companion object {
+        fun ok(event: Event) = CommandResult(event.id, true)
+        fun duplicated(event: Event) = CommandResult(event.id, true, "duplicate:")
     }
 }

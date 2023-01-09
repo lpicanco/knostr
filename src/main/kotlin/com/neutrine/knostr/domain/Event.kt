@@ -1,6 +1,7 @@
 package com.neutrine.knostr.domain
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.neutrine.knostr.Utils.hexToBytes
 import com.neutrine.knostr.Utils.objectMapper
@@ -24,7 +25,9 @@ data class Event(
     val createdAt: Int, // unix timestamp in seconds
     val kind: Int, // integer
     @field:TypeDef(type = DataType.JSON)
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     val tags: List<List<String>>, // "e", <32-bytes hex of the id of another event>, <recommended relay URL>
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     val content: String, // arbitrary string
     val sig: String // 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
 ) {
@@ -47,4 +50,11 @@ data class Event(
 
     fun hasValidId(): Boolean = sha256.toHex() == id
     fun hasValidSignature(): Boolean = Schnorr.verify(sha256, hexToBytes(pubkey), hexToBytes(sig))
+    fun shouldBeDeleted(): Boolean = kind == KIND_EVENT_DELETION
+
+    fun referencedEventIds(): Set<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }.toSet()
+
+    companion object {
+        const val KIND_EVENT_DELETION = 5
+    }
 }
