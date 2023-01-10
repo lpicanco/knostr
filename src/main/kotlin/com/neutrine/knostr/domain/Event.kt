@@ -58,6 +58,7 @@ data class Event(
 
     fun shouldBeDeleted(): Boolean = kind == KIND_EVENT_DELETION
     fun shouldOverwrite(): Boolean = KINDS_EVENT_REPLACEABLE.any { it.contains(kind) }
+    fun shouldSave(): Boolean = !KINDS_EVENT_EPHEMERAL.contains(kind)
     fun referencedEventIds(): Set<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }.toSet()
 
     companion object {
@@ -67,5 +68,6 @@ data class Event(
             3..3,
             10000 until 20000
         )
+        private val KINDS_EVENT_EPHEMERAL = 20000 until 30000
     }
 }

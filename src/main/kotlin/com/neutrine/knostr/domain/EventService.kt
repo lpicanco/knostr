@@ -31,7 +31,7 @@ class EventService(
                 when {
                     event.shouldBeDeleted() -> handleDelete(event)
                     event.shouldOverwrite() -> handleOverwrite(event)
-                    else -> handleSave(event)
+                    event.shouldSave() -> handleSave(event)
                 }
 
                 subscriptionService.notify(event, session)

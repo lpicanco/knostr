@@ -1,7 +1,7 @@
 version: '3.1'
 services:
   knostr:
-    image: knostr:0.2
+    image: knostr:0.3
     links:
       - "db"
     ports:

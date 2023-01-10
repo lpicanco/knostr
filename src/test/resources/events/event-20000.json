@@ -1,0 +1,9 @@
+{
+  "content": "Ephemeral note",
+  "created_at": 1673377850,
+  "id": "38aaf7e5e6bd3ef1ddcdd02719fcad9f14cc6121b00957bdc5c8733f5b773b69",
+  "kind": 20000,
+  "pubkey": "e8ab2abb725ddacf1f9fd2a7efee4ab51c0ae80f8f4c099e2c208a97c03326c6",
+  "sig": "335944f9f09272db2c812d0602bf76ac3d76398ffa11ff590716174286ec7ff6ab010d1817225ebd4d1ed3da08c5049c92d7131add3dc83fa6c22473fe19b3b8",
+  "tags": []
+}

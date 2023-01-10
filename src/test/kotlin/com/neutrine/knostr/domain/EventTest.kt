@@ -114,10 +114,35 @@ class EventTest {
         "10001, true",
         "19999, true",
         "20000, false",
+        "20001, false",
     )
     fun `should return if an event should be overwritten`(kind: Int, expected: Boolean) {
         val event = createEvent()
         assertEquals(expected, event.copy(kind = kind).shouldOverwrite())
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "0, true",
+        "1, true",
+        "2, true",
+        "3, true",
+        "4, true",
+        "5, true",
+        "6, true",
+        "7, true",
+        "999, true",
+        "10000, true",
+        "10001, true",
+        "19999, true",
+        "20000, false",
+        "20001, false",
+        "29999, false",
+        "30000, true",
+    )
+    fun `should return if an event should be saved`(kind: Int, expected: Boolean) {
+        val event = createEvent()
+        assertEquals(expected, event.copy(kind = kind).shouldSave())
     }
 
     @Test

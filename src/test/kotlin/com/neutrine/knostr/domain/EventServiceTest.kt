@@ -104,6 +104,24 @@ class EventServiceTest {
     }
 
     @Test
+    fun `should not save an ephemeral event`() = runTest {
+        val event = createEvent("/events/event-20000.json")
+        val session = mockk<WebSocketSession>()
+
+        val result = eventService.save(event, session)
+        val expectedResult = CommandResult(event.id, true)
+
+        verify { subscriptionService.notify(event, session) }
+        verify { messageSender.send(expectedResult.toJson(), session) }
+        verify { eventStore wasNot Called }
+
+        assertEquals(expectedResult, result)
+        assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
+
+        confirmVerified()
+    }
+
+    @Test
     fun `should handle a error`() = runTest {
         val event = createEvent()
         val session = mockk<WebSocketSession>()
