@@ -7,8 +7,7 @@
 # Knostr
 
 Nostr Relay Implementation
-
-[wss://knostr.neutrine.com:8880](wss://knostr.neutrine.com:8880)
+[wss://knostr.neutrine.com](wss://knostr.neutrine.com)
 
 ## Implemented NIPs
 - [x] NIP-01
@@ -20,3 +19,12 @@ Nostr Relay Implementation
 - [x] NIP-15
 - [x] NIP-20
 - [x] NIP-28
+
+
+## How to Run:
+
+### Docker(self-build)
+```bash
+./gradlew jibDockerBuild
+docker-compose up
+```

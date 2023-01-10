@@ -1,5 +1,13 @@
 version: '3.1'
 services:
+  knostr:
+    image: knostr:0.2
+    links:
+      - "db"
+    ports:
+      - 8080:8080
+      - 8082:8082
+    restart: unless-stopped
   db:
     container_name: knostr-postgres
     image: postgres:15.1-alpine
