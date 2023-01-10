@@ -1,7 +1,6 @@
 package com.neutrine.knostr
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.neutrine.knostr.Utils.MESSAGE_DIGEST
 import java.math.BigInteger
 import java.security.MessageDigest
 
@@ -16,7 +15,6 @@ object Utils {
     }
 
     val objectMapper = jacksonObjectMapper()
-    val MESSAGE_DIGEST: MessageDigest = MessageDigest.getInstance("SHA-256")
 }
 
 fun ByteArray.toBigInteger() = BigInteger(1, this)
@@ -24,7 +22,7 @@ fun ByteArray.toBigInteger() = BigInteger(1, this)
 fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 
 fun ByteArray.toSha256(): ByteArray {
-    return MESSAGE_DIGEST.digest(this)
+    return MessageDigest.getInstance("SHA-256").digest(this)
 }
 
 fun String.toSha256(): ByteArray = toByteArray().toSha256()
