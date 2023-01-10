@@ -18,9 +18,9 @@ class EventService(
     @NewSpan("save-event")
     suspend fun save(event: Event, session: WebSocketSession): CommandResult {
         val result = if (!event.hasValidId()) {
-            CommandResult(event.id, false, "invalid: event id does not match")
+            CommandResult.invalid(event, "event id does not match")
         } else if (!event.hasValidSignature()) {
-            CommandResult(event.id, false, "invalid: event signature verification failed")
+            CommandResult.invalid(event, "event signature verification failed")
         } else if (eventStore.existsById(event.id)) {
             CommandResult.duplicated(event)
         } else {
@@ -68,5 +68,6 @@ data class CommandResult(val eventId: String, val result: Boolean, val descripti
     companion object {
         fun ok(event: Event) = CommandResult(event.id, true)
         fun duplicated(event: Event) = CommandResult(event.id, true, "duplicate:")
+        fun invalid(event: Event, message: String) = CommandResult(event.id, false, "invalid: $message")
     }
 }
