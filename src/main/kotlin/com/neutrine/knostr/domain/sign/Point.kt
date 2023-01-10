@@ -16,7 +16,7 @@ class Point(val x: BigInteger?, val y: BigInteger?) {
     }
 
     fun hasEvenY(): Boolean {
-        return if (y == null) false else y.mod(BigInteger.TWO).compareTo(BigInteger.ZERO) == 0
+        return y != null && y.mod(BigInteger.TWO).compareTo(BigInteger.ZERO) == 0
     }
 
     companion object {
