@@ -49,7 +49,13 @@ data class Event(
     fun isValid(): Boolean = hasValidId() && hasValidSignature()
 
     fun hasValidId(): Boolean = sha256.toHex() == id
-    fun hasValidSignature(): Boolean = Schnorr.verify(sha256, hexToBytes(pubkey), hexToBytes(sig))
+
+    fun hasValidSignature(): Boolean = try {
+        Schnorr.verify(sha256, hexToBytes(pubkey), hexToBytes(sig))
+    } catch (e: Exception) {
+        false
+    }
+
     fun shouldBeDeleted(): Boolean = kind == KIND_EVENT_DELETION
     fun shouldOverwrite(): Boolean = KINDS_EVENT_REPLACEABLE.contains(kind)
     fun referencedEventIds(): Set<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }.toSet()

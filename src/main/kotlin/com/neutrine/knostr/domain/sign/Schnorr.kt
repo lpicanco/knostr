@@ -1,11 +1,23 @@
 package com.neutrine.knostr.domain.sign
 
 import com.neutrine.knostr.toBigInteger
+import mu.KotlinLogging
 import java.math.BigInteger
 
 @Suppress("LocalVariableName")
 object Schnorr {
+    private val logger = KotlinLogging.logger {}
+
     fun verify(msg: ByteArray, pubkey: ByteArray, sig: ByteArray): Boolean {
+        return try {
+            verifySignature(msg, pubkey, sig)
+        } catch (e: Exception) {
+            logger.warn("Schnorr signature verification failed", e)
+            false
+        }
+    }
+
+    private fun verifySignature(msg: ByteArray, pubkey: ByteArray, sig: ByteArray): Boolean {
         if (msg.size != 32) {
             throw Exception("The message must be a 32-byte array.")
         }
