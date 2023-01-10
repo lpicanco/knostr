@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.lang.IllegalArgumentException
 
 @ExtendWith(MockKExtension::class)
 @MockKExtension.ConfirmVerification
@@ -100,6 +101,21 @@ class EventServiceTest {
         assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
 
         confirmVerified()
+    }
+
+    @Test
+    fun `should handle a error`() = runTest {
+        val event = createEvent()
+        val session = mockk<WebSocketSession>()
+        every { eventStore.existsById(event.id) } throws IllegalArgumentException("SomeError")
+
+        val result = eventService.save(event, session)
+        val expectedResult = CommandResult(event.id, false, "error: internal error saving the event")
+
+        verify { messageSender.send(expectedResult.toJson(), session) }
+
+        assertEquals(expectedResult, result)
+        assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
     }
 
     @ParameterizedTest

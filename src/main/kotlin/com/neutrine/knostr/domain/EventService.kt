@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.inject.Singleton
+import mu.KotlinLogging
 
 @Singleton
 class EventService(
@@ -15,23 +16,30 @@ class EventService(
     private val messageSender: MessageSender,
     private val meterRegistry: MeterRegistry
 ) {
+    private val logger = KotlinLogging.logger {}
+
     @NewSpan("save-event")
     suspend fun save(event: Event, session: WebSocketSession): CommandResult {
-        val result = if (!event.hasValidId()) {
-            CommandResult.invalid(event, "event id does not match")
-        } else if (!event.hasValidSignature()) {
-            CommandResult.invalid(event, "event signature verification failed")
-        } else if (eventStore.existsById(event.id)) {
-            CommandResult.duplicated(event)
-        } else {
-            when {
-                event.shouldBeDeleted() -> handleDelete(event)
-                event.shouldOverwrite() -> handleOverwrite(event)
-                else -> handleSave(event)
-            }
+        val result = try {
+            if (!event.hasValidId()) {
+                CommandResult.invalid(event, "event id does not match")
+            } else if (!event.hasValidSignature()) {
+                CommandResult.invalid(event, "event signature verification failed")
+            } else if (eventStore.existsById(event.id)) {
+                CommandResult.duplicated(event)
+            } else {
+                when {
+                    event.shouldBeDeleted() -> handleDelete(event)
+                    event.shouldOverwrite() -> handleOverwrite(event)
+                    else -> handleSave(event)
+                }
 
-            subscriptionService.notify(event, session)
-            CommandResult.ok(event)
+                subscriptionService.notify(event, session)
+                CommandResult.ok(event)
+            }
+        } catch (e: Exception) {
+            logger.error("Error saving the event", e)
+            CommandResult.error(event, "internal error saving the event")
         }
 
         messageSender.send(result.toJson(), session)
@@ -69,5 +77,6 @@ data class CommandResult(val eventId: String, val result: Boolean, val descripti
         fun ok(event: Event) = CommandResult(event.id, true)
         fun duplicated(event: Event) = CommandResult(event.id, true, "duplicate:")
         fun invalid(event: Event, message: String) = CommandResult(event.id, false, "invalid: $message")
+        fun error(event: Event, message: String) = CommandResult(event.id, false, "error: $message")
     }
 }
