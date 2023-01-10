@@ -108,7 +108,12 @@ class EventTest {
         "4, false",
         "5, false",
         "6, false",
-        "7, false"
+        "7, false",
+        "999, false",
+        "10000, true",
+        "10001, true",
+        "19999, true",
+        "20000, false",
     )
     fun `should return if an event should be overwritten`(kind: Int, expected: Boolean) {
         val event = createEvent()

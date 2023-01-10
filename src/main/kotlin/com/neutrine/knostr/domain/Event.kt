@@ -57,11 +57,15 @@ data class Event(
     }
 
     fun shouldBeDeleted(): Boolean = kind == KIND_EVENT_DELETION
-    fun shouldOverwrite(): Boolean = KINDS_EVENT_REPLACEABLE.contains(kind)
+    fun shouldOverwrite(): Boolean = KINDS_EVENT_REPLACEABLE.any { it.contains(kind) }
     fun referencedEventIds(): Set<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }.toSet()
 
     companion object {
         private const val KIND_EVENT_DELETION = 5
-        private val KINDS_EVENT_REPLACEABLE = setOf(0, 3)
+        private val KINDS_EVENT_REPLACEABLE = setOf(
+            0..0,
+            3..3,
+            10000 until 20000
+        )
     }
 }
