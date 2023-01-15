@@ -10,6 +10,7 @@ import jakarta.inject.Singleton
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 @Singleton
 class SubscriptionService(
@@ -19,12 +20,13 @@ class SubscriptionService(
     private val meterRegistry: MeterRegistry
 ) {
     private val subscriptions: MutableMap<String, Subscription> = ConcurrentHashMap()
+    private val subscriptionCount: AtomicInteger = meterRegistry.gauge(EVENT_SUBSCRIPTION_TOTAL_METRICS, AtomicInteger(0))
 
     @NewSpan("subscribe")
     suspend fun subscribe(subscriptionId: String, session: WebSocketSession, filters: Set<EventFilter>) {
         subscriptions[getKey(subscriptionId, session)] = Subscription(subscriptionId, session, filters)
         meterRegistry.counter(EVENT_SUBSCRIPTION_METRICS).increment()
-        meterRegistry.gauge(EVENT_SUBSCRIPTION_TOTAL_METRICS, subscriptions.size.toDouble())
+        subscriptionCount.set(subscriptions.size)
 
         eventRepository.filter(filters)
             .map { sendEvent(it, subscriptionId, session) }
@@ -45,7 +47,7 @@ class SubscriptionService(
 
     fun unsubscribe(subscriptionId: String, session: WebSocketSession) {
         subscriptions.remove(getKey(subscriptionId, session))
-        meterRegistry.gauge(EVENT_SUBSCRIPTION_TOTAL_METRICS, subscriptions.size.toDouble())
+        subscriptionCount.set(subscriptions.size)
     }
 
     fun unsubscribeSocketSession(session: WebSocketSession) {

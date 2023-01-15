@@ -12,7 +12,6 @@ import io.micronaut.websocket.WebSocketSession
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
@@ -37,12 +36,12 @@ class SubscriptionServiceTest {
 
     private val session = mockk<WebSocketSession>()
 
-    @InjectMockKs
     private lateinit var subscriptionService: SubscriptionService
 
     @BeforeEach
     fun setUp() {
         meterRegistry.clear()
+        subscriptionService = SubscriptionService(objectMapper, eventRepository, messageSender, meterRegistry)
         every { session.id } returns "session-id"
         every { session.isOpen } returns true
     }
