@@ -43,19 +43,27 @@ class Relay(
         }
     }
 
-    @OnMessage
+    @OnMessage(maxPayloadLength = Int.MAX_VALUE)
     @NewSpan("onMessage")
-    fun onMessage(message: String, session: WebSocketSession) = coroutineScope.launch(errorHandler) {
-        val messageArguments = objectMapper.readTree(message)
-        if (messageArguments.size() < 2) {
-            throw IllegalArgumentException("Invalid message: $message")
+    fun onMessage(message: String, session: WebSocketSession) {
+        if (message.length > 65536) {
+            logger.warn("Message too long", kv("size", message.length))
+            session.sendSync("""["NOTICE","invalid: payload size must be less than or equal to 65536"]""")
+            return
         }
 
-        when (messageArguments[0].asText()) {
-            "REQ" -> subscribe(messageArguments[1].asText(), messageArguments.drop(2), session)
-            "EVENT" -> processEvent(messageArguments[1], session)
-            "CLOSE" -> unsubscribe(messageArguments[1].asText(), session)
-            else -> throw IllegalArgumentException("Unsupported message: $message")
+        coroutineScope.launch(errorHandler) {
+            val messageArguments = objectMapper.readTree(message)
+            if (messageArguments.size() < 2) {
+                throw IllegalArgumentException("Invalid message: $message")
+            }
+
+            when (messageArguments[0].asText()) {
+                "REQ" -> subscribe(messageArguments[1].asText(), messageArguments.drop(2), session)
+                "EVENT" -> processEvent(messageArguments[1], session)
+                "CLOSE" -> unsubscribe(messageArguments[1].asText(), session)
+                else -> throw IllegalArgumentException("Unsupported message: $message")
+            }
         }
     }
 
