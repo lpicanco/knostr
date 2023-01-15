@@ -24,6 +24,7 @@ class SubscriptionService(
     suspend fun subscribe(subscriptionId: String, session: WebSocketSession, filters: Set<EventFilter>) {
         subscriptions[getKey(subscriptionId, session)] = Subscription(subscriptionId, session, filters)
         meterRegistry.counter(EVENT_SUBSCRIPTION_METRICS).increment()
+        meterRegistry.gauge(EVENT_SUBSCRIPTION_TOTAL_METRICS, subscriptions.size.toDouble())
 
         eventRepository.filter(filters)
             .map { sendEvent(it, subscriptionId, session) }
@@ -44,6 +45,7 @@ class SubscriptionService(
 
     fun unsubscribe(subscriptionId: String, session: WebSocketSession) {
         subscriptions.remove(getKey(subscriptionId, session))
+        meterRegistry.gauge(EVENT_SUBSCRIPTION_TOTAL_METRICS, subscriptions.size.toDouble())
     }
 
     fun unsubscribeSocketSession(session: WebSocketSession) {
@@ -84,6 +86,7 @@ class SubscriptionService(
 
     companion object {
         const val EVENT_SUBSCRIPTION_METRICS = "event.subscription"
+        const val EVENT_SUBSCRIPTION_TOTAL_METRICS = "event.subscription.total"
     }
 }
 

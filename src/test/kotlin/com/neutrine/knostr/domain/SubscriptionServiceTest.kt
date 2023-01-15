@@ -6,6 +6,7 @@ import com.neutrine.knostr.adapters.repository.EventStore
 import com.neutrine.knostr.adapters.ws.MessageSender
 import com.neutrine.knostr.createEvent
 import com.neutrine.knostr.domain.SubscriptionService.Companion.EVENT_SUBSCRIPTION_METRICS
+import com.neutrine.knostr.domain.SubscriptionService.Companion.EVENT_SUBSCRIPTION_TOTAL_METRICS
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.clearMocks
@@ -66,6 +67,7 @@ class SubscriptionServiceTest {
 
         assertTrue(subscriptionService.exists(Subscription(subId, session, filters)))
         assertEquals(1.0, meterRegistry.counter(EVENT_SUBSCRIPTION_METRICS).count())
+        assertEquals(1.0, meterRegistry.get(EVENT_SUBSCRIPTION_TOTAL_METRICS).gauge().value())
     }
 
     @Test
