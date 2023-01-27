@@ -3,6 +3,7 @@ package com.neutrine.knostr.adapters.ws
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.Called
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.junit5.MockKExtension
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
+@MockKExtension.ConfirmVerification
 class MessageSenderTest {
     private val testScope = TestScope()
     private val meterRegistry = SimpleMeterRegistry()
@@ -30,6 +32,7 @@ class MessageSenderTest {
     @BeforeEach
     fun setUp() {
         meterRegistry.clear()
+        clearAllMocks()
     }
 
     @Test
@@ -76,7 +79,10 @@ class MessageSenderTest {
 
         advanceUntilIdle()
 
-        verify { session.sendSync(message) }
+        verifySequence {
+            session.isOpen
+            session.sendSync(message)
+        }
         assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
         messageSender.close()
     }
