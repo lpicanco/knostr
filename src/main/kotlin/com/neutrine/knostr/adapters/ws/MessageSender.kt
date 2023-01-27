@@ -5,15 +5,13 @@ import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Singleton
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.time.withTimeout
-import kotlinx.coroutines.withContext
 import mu.KotlinLogging
-import java.time.Duration
 
 @Singleton
 class MessageSender(
@@ -21,7 +19,6 @@ class MessageSender(
     private val meterRegistry: MeterRegistry
 ) : AutoCloseable {
     private val channel = Channel<ChannelMessage>(10_000)
-    private val messageSenderDispatcher = Dispatchers.IO.limitedParallelism(50)
     private val logger = KotlinLogging.logger {}
 
     init {
@@ -51,11 +48,9 @@ class MessageSender(
         for (channelMessage in channel) {
             if (channelMessage.session.isOpen) {
                 withTimeout(Duration.ofSeconds(1)) {
-                    withContext(messageSenderDispatcher) {
-                        channelMessage.session.sendSync(channelMessage.message)
-                        meterRegistry.counter(EVENT_SEND_METRICS).increment()
-                        logger.info("sentEvent")
-                    }
+                    channelMessage.session.sendSync(channelMessage.message)
+                    meterRegistry.counter(EVENT_SEND_METRICS).increment()
+                    logger.info("sentEvent")
                 }
             }
         }
