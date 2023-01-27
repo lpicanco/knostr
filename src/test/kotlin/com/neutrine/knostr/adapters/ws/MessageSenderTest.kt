@@ -26,7 +26,7 @@ class MessageSenderTest {
     private val testScope = TestScope()
     private val meterRegistry = SimpleMeterRegistry()
 
-    @InjectMockKs
+    @InjectMockKs(overrideValues = true)
     private lateinit var messageSender: MessageSender
 
     @BeforeEach
