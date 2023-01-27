@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.time.withTimeout
 import kotlinx.coroutines.withContext
+import mu.KotlinLogging
 import java.time.Duration
 
 @Singleton
@@ -20,7 +21,8 @@ class MessageSender(
     private val meterRegistry: MeterRegistry
 ) : AutoCloseable {
     private val channel = Channel<ChannelMessage>(10_000)
-    private val messageSenderDispatcher = Dispatchers.IO.limitedParallelism(30)
+    private val messageSenderDispatcher = Dispatchers.IO.limitedParallelism(50)
+    private val logger = KotlinLogging.logger {}
 
     init {
         repeat(MESSAGE_PROCESSORS_COUNT) {
@@ -48,19 +50,20 @@ class MessageSender(
     private suspend fun launchProcessor() {
         for (channelMessage in channel) {
             if (channelMessage.session.isOpen) {
-                withTimeout(Duration.ofSeconds(2)) {
+                withTimeout(Duration.ofSeconds(1)) {
                     withContext(messageSenderDispatcher) {
                         channelMessage.session.sendSync(channelMessage.message)
+                        meterRegistry.counter(EVENT_SEND_METRICS).increment()
+                        logger.info("sentEvent")
                     }
                 }
-                meterRegistry.counter(EVENT_SEND_METRICS).increment()
             }
         }
     }
 
     companion object {
         const val EVENT_SEND_METRICS = "event.send"
-        private const val MESSAGE_PROCESSORS_COUNT = 20
+        private const val MESSAGE_PROCESSORS_COUNT = 100
     }
 
     @PreDestroy
