@@ -9,8 +9,11 @@ data class EventFilter(
     val tags: Map<String, Set<String>> = emptyMap(),
     val since: Int? = null,
     val until: Int? = null,
-    val limit: Int = 10_000
+    val limit: Int = 10_000,
+    private val search: String? = null
 ) : Predicate<Event> {
+
+    val searchKeywords: Set<String> = search?.let { tokenizeString(search) } ?: emptySet()
 
     override fun test(event: Event): Boolean {
         if (since != null && event.createdAt < since) {

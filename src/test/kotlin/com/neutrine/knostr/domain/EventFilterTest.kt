@@ -77,6 +77,30 @@ class EventFilterTest {
         )
     }
 
+    @Test
+    fun `should filter by search`() {
+        assertTrue(baseFilter.copy(search = EVENT.content).test(EVENT))
+        assertTrue(baseFilter.copy(search = "quick").test(EVENT))
+        assertTrue(baseFilter.copy(search = "quick brown").test(EVENT))
+        assertTrue(baseFilter.copy(search = "quick fox").test(EVENT))
+        assertTrue(baseFilter.copy(search = "quick, fox").test(EVENT))
+        assertTrue(baseFilter.copy(search = "QuiCK fOx").test(EVENT))
+        assertFalse(baseFilter.copy(search = "bro").test(EVENT))
+        assertFalse(baseFilter.copy(search = "quicks").test(EVENT))
+        assertFalse(baseFilter.copy(search = "quick not").test(EVENT))
+    }
+
+    @Test
+    fun `should filter by search on json`() {
+        val content = """"content": "{\"lud06\":\"\",\"display_name\":\"Luiz\",\"website\":\"\",\"name\":\"lpicanco\",\"about\":\"\",\"picture\":\"https:\\/\\/avatars.githubusercontent.com\\/u\\/8377\"}""""
+        val event = EVENT.copy(content = content)
+        assertTrue(baseFilter.copy(search = event.content).test(event))
+        assertTrue(baseFilter.copy(search = "avatars.githubusercontent").test(event))
+        assertTrue(baseFilter.copy(search = "githubusercontent").test(event))
+        assertTrue(baseFilter.copy(search = "lud06").test(event))
+        assertFalse(baseFilter.copy(search = "lud06s").test(event))
+    }
+
     @ParameterizedTest
     @CsvSource(
         "52b9055fabe28c51641bd0230096258f7d6e517910bf99fd3425d1ae507d8c34,2e9397a8c9268585668b76479f88e359d0ee261f8e8ea07b3b3450546d1601c8,1,1672313107,1672313107,client,mock,TRUE",
@@ -121,7 +145,7 @@ class EventFilterTest {
                 listOf("p", "af8a52753d36b10c1bcc1e92d61ea2a4d3badec286444ab022d1e56fae9e200f"),
                 listOf("client", "mock"),
             ),
-            content = "",
+            content = "The quick brown fox, jumps over the lazy dog",
             sig = ""
         )
     }

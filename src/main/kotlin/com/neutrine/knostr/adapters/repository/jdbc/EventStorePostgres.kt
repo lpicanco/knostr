@@ -87,6 +87,14 @@ abstract class EventStorePostgres(
             parameters.addAll(filter.authors.map { "$it%" })
         }
 
+        if (filter.searchKeywords.isNotEmpty()) {
+            predicates.add(
+                filter.searchKeywords.joinToString(" AND ", prefix = "(", postfix = ")") { "content ~* ?" }
+            )
+
+            parameters.addAll(filter.searchKeywords.map { it })
+        }
+
         if (filter.kinds.isNotEmpty()) {
             predicates.add("kind IN (${filter.kinds.joinToString(",") { "?" }})")
             parameters.addAll(filter.kinds)
