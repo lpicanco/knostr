@@ -5,13 +5,13 @@ import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Singleton
-import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.time.withTimeout
 import mu.KotlinLogging
+import java.time.Duration
 
 @Singleton
 class MessageSender(

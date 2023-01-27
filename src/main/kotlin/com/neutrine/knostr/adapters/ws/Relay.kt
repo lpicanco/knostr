@@ -7,6 +7,7 @@ import com.neutrine.knostr.domain.EventFilter
 import com.neutrine.knostr.domain.EventService
 import com.neutrine.knostr.domain.SubscriptionService
 import com.neutrine.knostr.infra.CoroutineScopeFactory.Companion.COROUTINE_MESSAGE_HANDLER
+import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Produces
 import io.micronaut.tracing.annotation.NewSpan
@@ -19,9 +20,11 @@ import io.micronaut.websocket.annotation.ServerWebSocket
 import jakarta.inject.Named
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.future.asCompletableFuture
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import net.logstash.logback.argument.StructuredArguments.kv
+import org.reactivestreams.Publisher
 
 @ServerWebSocket("/")
 class Relay(
@@ -45,14 +48,14 @@ class Relay(
 
     @OnMessage(maxPayloadLength = Int.MAX_VALUE)
     @NewSpan("onMessage")
-    fun onMessage(message: String, session: WebSocketSession) {
+    fun onMessage(message: String, session: WebSocketSession): Publisher<Unit> {
         if (message.length > 65536) {
             logger.warn("Message too long", kv("size", message.length))
             session.sendSync("""["NOTICE","invalid: payload size must be less than or equal to 65536"]""")
-            return
+            return Publishers.empty()
         }
 
-        coroutineScope.launch(errorHandler) {
+        val job = coroutineScope.launch(errorHandler) {
             val messageArguments = objectMapper.readTree(message)
             if (messageArguments.size() < 2) {
                 throw IllegalArgumentException("Invalid message: $message")
@@ -65,6 +68,8 @@ class Relay(
                 else -> throw IllegalArgumentException("Unsupported message: $message")
             }
         }
+
+        return Publishers.fromCompletableFuture(job.asCompletableFuture())
     }
 
     @OnError

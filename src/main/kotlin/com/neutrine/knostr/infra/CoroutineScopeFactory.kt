@@ -4,7 +4,6 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,11 +13,11 @@ class CoroutineScopeFactory {
 
     @Singleton
     @Primary
-    fun coroutineScopeOnIO() = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    fun coroutineScopeOnIO() = CoroutineScope(Dispatchers.IO.limitedParallelism(60) + SupervisorJob())
 
     @Singleton
     @Named(COROUTINE_MESSAGE_HANDLER)
-    fun coroutineMessageHandler() = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineName("message-handler"))
+    fun coroutineMessageHandler() = CoroutineScope(Dispatchers.IO.limitedParallelism(60) + SupervisorJob())
 
     companion object {
         const val COROUTINE_MESSAGE_HANDLER = "coroutineMessageHandler"
