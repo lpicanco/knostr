@@ -26,6 +26,8 @@ abstract class EventStorePostgres(
     private val transactionManager: SynchronousTransactionManager<Connection>
 ) : EventStore, CrudRepository<Event, String> {
 
+    private val filterDispatcher = Dispatchers.IO.limitedParallelism(30)
+
     @ContinueSpan
     override suspend fun filter(filters: Set<EventFilter>): List<Event> {
         return filters.asFlow().flatMapMerge {
@@ -106,7 +108,7 @@ abstract class EventStorePostgres(
 
         parameters.add(minOf(10_000, filter.limit))
 
-        return withContext(Dispatchers.IO) {
+        return withContext(filterDispatcher) {
             transactionManager.executeRead {
                 jdbcOperations.prepareStatement(query) { stmt ->
                     parameters.forEachIndexed { index, parameter ->

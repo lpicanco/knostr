@@ -9,7 +9,7 @@ plugins {
     jacoco
 }
 
-version = "0.3"
+version = "0.4"
 group = "com.neutrine.knostr"
 
 val kotlinVersion = project.properties["kotlinVersion"]
