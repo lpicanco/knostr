@@ -9,8 +9,11 @@ data class EventFilter(
     val tags: Map<String, Set<String>> = emptyMap(),
     val since: Int? = null,
     val until: Int? = null,
-    val limit: Int = 10_000
+    val limit: Int = 10_000,
+    private val search: String? = null
 ) : Predicate<Event> {
+
+    val searchKeywords: Set<String> = search?.let { tokenizeString(search) } ?: emptySet()
 
     override fun test(event: Event): Boolean {
         if (since != null && event.createdAt < since) {
@@ -37,6 +40,10 @@ data class EventFilter(
             return false
         }
 
+        if (!search.isNullOrBlank() && !testSearch(search, event)) {
+            return false
+        }
+
         return true
     }
 
@@ -47,5 +54,23 @@ data class EventFilter(
             .toSet()
 
         return tag.value.any { it in eventTags }
+    }
+
+    private fun testSearch(search: String, event: Event): Boolean {
+        val tokens = tokenizeString(search)
+        val eventTokens = tokenizeString(event.content)
+
+        return tokens.all { it in eventTokens }
+    }
+
+    private fun tokenizeString(string: String): Set<String> {
+        return string.split(TOKENIZE_REGEX)
+            .filter { it.isNotEmpty() }
+            .map { it.lowercase() }
+            .toSet()
+    }
+
+    companion object {
+        val TOKENIZE_REGEX = "[^a-zA-Z0-9]".toRegex()
     }
 }
