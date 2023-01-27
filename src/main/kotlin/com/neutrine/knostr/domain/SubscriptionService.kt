@@ -54,12 +54,12 @@ class SubscriptionService(
         getSubscriptions(session).forEach { unsubscribe(it.id, session) }
     }
 
-    fun notify(event: Event, session: WebSocketSession) {
+    suspend fun notify(event: Event, session: WebSocketSession) {
         subscriptions.values.filter { subscription ->
             subscription.socketSession.id != session.id && subscription.socketSession.isOpen &&
                 subscription.filters.any { it.test(event) }
         }.map { subscription ->
-            messageSender.send(createEventMessage(event, subscription.id), subscription.socketSession)
+            messageSender.sendLater(createEventMessage(event, subscription.id), subscription.socketSession)
         }
     }
 

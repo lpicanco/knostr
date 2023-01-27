@@ -47,6 +47,7 @@ class MessageSenderTest {
         verify { session.sendSync(message) }
         assertTrue(job.isCompleted)
         assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
+        messageSender.close()
     }
 
     @Test
@@ -60,5 +61,37 @@ class MessageSenderTest {
         verifySequence { session.isOpen }
         assertTrue(job.isCompleted)
         assertEquals(0.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
+
+        messageSender.close()
+    }
+
+    @Test
+    fun `should send a message later`() = testScope.runTest {
+        val message = "message"
+        val session = mockk<WebSocketSession>(relaxed = true)
+        every { session.isOpen } returns true
+        messageSender.sendLater(message, session)
+
+        verify { session wasNot Called }
+
+        advanceUntilIdle()
+
+        verify { session.sendSync(message) }
+        assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
+        messageSender.close()
+    }
+
+    @Test
+    fun `should not send a message later if session is closed`() = testScope.runTest {
+        val session = mockk<WebSocketSession>()
+        every { session.isOpen } returns false
+        messageSender.sendLater("message", session)
+
+        advanceUntilIdle()
+
+        verifySequence { session.isOpen }
+        assertEquals(0.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
+
+        messageSender.close()
     }
 }

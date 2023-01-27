@@ -11,6 +11,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.clearMocks
 import io.mockk.coEvery
+import io.mockk.coVerifySequence
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -148,9 +149,9 @@ class SubscriptionServiceTest {
 
         subscriptionService.notify(event, eventSession)
 
-        verifySequence {
-            messageSender.send("""["EVENT","sub43",${objectMapper.writeValueAsString(event)}]""", session02)
-            messageSender.send("""["EVENT","sub42",${objectMapper.writeValueAsString(event)}]""", session)
+        coVerifySequence {
+            messageSender.sendLater("""["EVENT","sub43",${objectMapper.writeValueAsString(event)}]""", session02)
+            messageSender.sendLater("""["EVENT","sub42",${objectMapper.writeValueAsString(event)}]""", session)
         }
     }
 }
