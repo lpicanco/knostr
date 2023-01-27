@@ -56,7 +56,7 @@ class EventServiceTest {
         val expectedResult = CommandResult(event.id, true)
 
         verify { eventStore.save(event) }
-        verify { subscriptionService.notify(event, session) }
+        coVerify { subscriptionService.notify(event, session) }
         verify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
@@ -75,7 +75,7 @@ class EventServiceTest {
 
         verify { eventStore.save(event) }
         verify { eventStore.deleteAll(event.pubkey, event.referencedEventIds()) }
-        verify { subscriptionService.notify(event, session) }
+        coVerify { subscriptionService.notify(event, session) }
         verify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
@@ -94,7 +94,7 @@ class EventServiceTest {
 
         verify { eventStore.save(event) }
         coVerify { eventStore.deleteOldestOfKind(event.pubkey, event.kind) }
-        verify { subscriptionService.notify(event, session) }
+        coVerify { subscriptionService.notify(event, session) }
         verify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
@@ -111,7 +111,7 @@ class EventServiceTest {
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, true)
 
-        verify { subscriptionService.notify(event, session) }
+        coVerify { subscriptionService.notify(event, session) }
         verify { messageSender.send(expectedResult.toJson(), session) }
         verify { eventStore wasNot Called }
 
