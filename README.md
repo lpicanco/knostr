@@ -20,6 +20,7 @@ Nostr Relay Implementation
 - [x] NIP-16 
 - [x] NIP-20
 - [x] NIP-28
+- [x] NIP-50
 
 
 ## How to Run:
