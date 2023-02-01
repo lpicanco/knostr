@@ -7,8 +7,6 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.inject.Singleton
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.joinAll
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -30,7 +28,6 @@ class SubscriptionService(
 
         eventRepository.filter(filters)
             .map { sendEvent(it, subscriptionId, session) }
-            .joinAll()
 
         messageSender.send(
             objectMapper.writeValueAsString(
@@ -77,8 +74,8 @@ class SubscriptionService(
         return "$subscriptionId-${session.id}"
     }
 
-    private fun sendEvent(event: Event, subscriptionId: String, session: WebSocketSession): Job {
-        return messageSender.send(
+    private suspend fun sendEvent(event: Event, subscriptionId: String, session: WebSocketSession) {
+        messageSender.send(
             objectMapper.writeValueAsString(
                 listOf("EVENT", subscriptionId, event)
             ),

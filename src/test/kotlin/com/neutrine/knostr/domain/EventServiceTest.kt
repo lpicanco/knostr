@@ -57,7 +57,7 @@ class EventServiceTest {
 
         verify { eventStore.save(event) }
         coVerify { subscriptionService.notify(event, session) }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
@@ -76,7 +76,7 @@ class EventServiceTest {
         verify { eventStore.save(event) }
         verify { eventStore.deleteAll(event.pubkey, event.referencedEventIds()) }
         coVerify { subscriptionService.notify(event, session) }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
@@ -95,7 +95,7 @@ class EventServiceTest {
         verify { eventStore.save(event) }
         coVerify { eventStore.deleteOldestOfKind(event.pubkey, event.kind) }
         coVerify { subscriptionService.notify(event, session) }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(1.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
@@ -112,7 +112,7 @@ class EventServiceTest {
         val expectedResult = CommandResult(event.id, true)
 
         coVerify { subscriptionService.notify(event, session) }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
         verify { eventStore wasNot Called }
 
         assertEquals(expectedResult, result)
@@ -130,7 +130,7 @@ class EventServiceTest {
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, false, "error: internal error saving the event")
 
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
@@ -155,7 +155,7 @@ class EventServiceTest {
 
         verify { subscriptionService wasNot Called }
         verify { eventStore wasNot Called }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
@@ -173,7 +173,7 @@ class EventServiceTest {
 
         verify { subscriptionService wasNot Called }
         verify { eventStore wasNot Called }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
@@ -189,7 +189,7 @@ class EventServiceTest {
 
         verify { subscriptionService wasNot Called }
         verify { eventStore wasNot Called }
-        verify { messageSender.send(expectedResult.toJson(), session) }
+        coVerify { messageSender.send(expectedResult.toJson(), session) }
 
         assertEquals(expectedResult, result)
         assertEquals(0.0, meterRegistry.counter(EventService.EVENT_SAVED_METRICS).count())
