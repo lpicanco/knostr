@@ -6,9 +6,9 @@ import io.micronaut.websocket.WebSocketSession
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.time.withTimeout
 import mu.KotlinLogging
 import java.time.Duration
@@ -30,11 +30,8 @@ class MessageSender(
     }
 
     @NewSpan("send-event")
-    fun send(message: String, session: WebSocketSession): Job = coroutineScope.launch {
-        if (session.isOpen) {
-            withTimeout(Duration.ofSeconds(2)) {
-                session.sendSync(message)
-            }
+    suspend fun send(message: String, session: WebSocketSession) {
+        if (session.sendMessage(message)) {
             meterRegistry.counter(EVENT_SEND_METRICS).increment()
         }
     }
@@ -42,23 +39,37 @@ class MessageSender(
     @NewSpan("send-event-later")
     suspend fun sendLater(message: String, session: WebSocketSession) {
         channel.send(ChannelMessage(message, session))
+        meterRegistry.counter(EVENT_SEND_LATER_SCHEDULED_METRICS).increment()
     }
 
     private suspend fun launchProcessor() {
         for (channelMessage in channel) {
-            if (channelMessage.session.isOpen) {
-                withTimeout(Duration.ofSeconds(1)) {
-                    channelMessage.session.sendSync(channelMessage.message)
-                    meterRegistry.counter(EVENT_SEND_METRICS).increment()
-                    logger.info("sentEvent")
-                }
+            if (channelMessage.session.sendMessage(channelMessage.message)) {
+                meterRegistry.counter(EVENT_SEND_LATER_METRICS).increment()
             }
         }
     }
 
+    private suspend fun WebSocketSession.sendMessage(message: String): Boolean {
+        try {
+            if (isOpen) {
+                withTimeout(Duration.ofSeconds(5)) {
+                    send(message).awaitFirstOrNull()
+                }
+                return true
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "Error sending message" }
+        }
+
+        return false
+    }
+
     companion object {
         const val EVENT_SEND_METRICS = "event.send"
-        private const val MESSAGE_PROCESSORS_COUNT = 100
+        const val EVENT_SEND_LATER_METRICS = "event.send.later"
+        const val EVENT_SEND_LATER_SCHEDULED_METRICS = "event.send.later.scheduled"
+        private const val MESSAGE_PROCESSORS_COUNT = 30
     }
 
     @PreDestroy

@@ -14,11 +14,10 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import reactor.core.publisher.Mono
 
 @ExtendWith(MockKExtension::class)
 @MockKExtension.ConfirmVerification
@@ -40,15 +39,12 @@ class MessageSenderTest {
         val message = "message"
         val session = mockk<WebSocketSession>(relaxed = true)
         every { session.isOpen } returns true
-        val job = messageSender.send(message, session)
+        every { session.send(message) } returns Mono.empty()
 
-        verify { session wasNot Called }
-        assertFalse(job.isCompleted)
+        messageSender.send(message, session)
 
-        advanceUntilIdle()
+        verify { session.send(message) }
 
-        verify { session.sendSync(message) }
-        assertTrue(job.isCompleted)
         assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
         messageSender.close()
     }
@@ -57,12 +53,11 @@ class MessageSenderTest {
     fun `should not send a message if session is closed`() = testScope.runTest {
         val session = mockk<WebSocketSession>()
         every { session.isOpen } returns false
-        val job = messageSender.send("message", session)
+        messageSender.send("message", session)
 
         advanceUntilIdle()
 
         verifySequence { session.isOpen }
-        assertTrue(job.isCompleted)
         assertEquals(0.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
 
         messageSender.close()
@@ -73,17 +68,24 @@ class MessageSenderTest {
         val message = "message"
         val session = mockk<WebSocketSession>(relaxed = true)
         every { session.isOpen } returns true
+        every { session.send(message) } returns Mono.empty()
+
         messageSender.sendLater(message, session)
 
         verify { session wasNot Called }
+
+        assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_LATER_SCHEDULED_METRICS).count())
+        assertEquals(0.0, meterRegistry.counter(MessageSender.EVENT_SEND_LATER_METRICS).count())
 
         advanceUntilIdle()
 
         verifySequence {
             session.isOpen
-            session.sendSync(message)
+            session.send(message)
         }
-        assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
+
+        assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_LATER_SCHEDULED_METRICS).count())
+        assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_LATER_METRICS).count())
         messageSender.close()
     }
 

@@ -16,8 +16,6 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
-import io.mockk.verifySequence
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -55,11 +53,10 @@ class SubscriptionServiceTest {
         val events = listOf(createEvent("/events/event-00.json"), createEvent("/events/event-01.json"))
 
         coEvery { eventRepository.filter(filters) } returns events
-        every { messageSender.send(any(), any()) } returns Job().also { it.complete() }
 
         subscriptionService.subscribe(subId, session, filters)
 
-        verifySequence {
+        coVerifySequence {
             messageSender.send("""["EVENT","$subId",${objectMapper.writeValueAsString(events[0])}]""", session)
             messageSender.send("""["EVENT","$subId",${objectMapper.writeValueAsString(events[1])}]""", session)
             messageSender.send("""["EOSE","$subId"]""", session)
@@ -79,7 +76,6 @@ class SubscriptionServiceTest {
         val events = listOf(createEvent("/events/event-00.json"), createEvent("/events/event-01.json"))
 
         coEvery { eventRepository.filter(any()) } returns events
-        every { messageSender.send(any(), any()) } returns Job().also { it.complete() }
 
         subscriptionService.subscribe(subId, session, filters01)
         subscriptionService.subscribe(subId, session, filters02)
