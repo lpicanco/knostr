@@ -7,8 +7,6 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 
 @Singleton
@@ -59,10 +57,8 @@ class EventService(
     }
 
     private suspend fun handleSave(event: Event) {
-        withContext(Dispatchers.IO) {
-            eventStore.save(event)
-            meterRegistry.counter(EVENT_SAVED_METRICS).increment()
-        }
+        eventStore.save(event)
+        meterRegistry.counter(EVENT_SAVED_METRICS).increment()
     }
 
     companion object {

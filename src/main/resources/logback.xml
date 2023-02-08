@@ -7,7 +7,7 @@
         </encoder>
     </appender>
 
-    <appender name="STDOUTJson" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="PrettyJson" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <jsonGeneratorDecorator class="net.logstash.logback.decorate.CompositeJsonGeneratorDecorator">
                 <decorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/>
@@ -15,9 +15,11 @@
         </encoder>
     </appender>
 
+    <appender name="Json" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+    </appender>
 
     <root level="INFO">
-<!--        <appender-ref ref="STDOUTJson" />-->
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="Json" />
     </root>
 </configuration>
