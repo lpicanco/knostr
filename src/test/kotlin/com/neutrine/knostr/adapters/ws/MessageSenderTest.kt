@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import reactor.core.publisher.Mono
+import java.util.concurrent.CompletableFuture
 
 @ExtendWith(MockKExtension::class)
 @MockKExtension.ConfirmVerification
@@ -39,11 +39,11 @@ class MessageSenderTest {
         val message = "message"
         val session = mockk<WebSocketSession>(relaxed = true)
         every { session.isOpen } returns true
-        every { session.send(message) } returns Mono.empty()
+        every { session.sendAsync(message) } returns CompletableFuture.completedFuture(message)
 
         messageSender.send(message, session)
 
-        verify { session.send(message) }
+        verify { session.sendAsync(message) }
 
         assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_METRICS).count())
         messageSender.close()
@@ -68,7 +68,7 @@ class MessageSenderTest {
         val message = "message"
         val session = mockk<WebSocketSession>(relaxed = true)
         every { session.isOpen } returns true
-        every { session.send(message) } returns Mono.empty()
+        every { session.sendAsync(message) } returns CompletableFuture.completedFuture(message)
 
         messageSender.sendLater(message, session)
 
@@ -81,7 +81,7 @@ class MessageSenderTest {
 
         verifySequence {
             session.isOpen
-            session.send(message)
+            session.sendAsync(message)
         }
 
         assertEquals(1.0, meterRegistry.counter(MessageSender.EVENT_SEND_LATER_SCHEDULED_METRICS).count())
