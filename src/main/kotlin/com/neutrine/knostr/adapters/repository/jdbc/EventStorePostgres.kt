@@ -8,7 +8,7 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.jdbc.runtime.JdbcOperations
 import io.micronaut.data.model.query.builder.sql.Dialect
-import io.micronaut.data.repository.CrudRepository
+import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.ContinueSpan
 import io.micronaut.transaction.SynchronousTransactionManager
 import kotlinx.coroutines.Dispatchers
@@ -24,20 +24,20 @@ import java.sql.Connection
 abstract class EventStorePostgres(
     private val jdbcOperations: JdbcOperations,
     private val transactionManager: SynchronousTransactionManager<Connection>
-) : EventStore, CrudRepository<Event, String> {
+) : EventStore, CoroutineCrudRepository<Event, String> {
 
     private val filterDispatcher = Dispatchers.IO.limitedParallelism(30)
 
     @ContinueSpan
     override suspend fun filter(filters: Set<EventFilter>): List<Event> {
-        return filters.asFlow().flatMapMerge {
+        return filters.asFlow().flatMapMerge(5) {
             flow { emit(filter(it)) }
         }.toList().flatten()
     }
 
     @Query("UPDATE event SET deleted = true WHERE pubkey = :pubkey AND event_id in (:eventIds)")
     @ContinueSpan
-    abstract override fun deleteAll(pubkey: String, eventIds: Set<String>)
+    abstract override suspend fun deleteAll(pubkey: String, eventIds: Set<String>)
 
     @ContinueSpan
     override suspend fun deleteOldestOfKind(pubkey: String, kind: Int) {

@@ -7,10 +7,10 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.Called
 import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.coExcludeRecords
 import io.mockk.coVerify
 import io.mockk.confirmVerified
-import io.mockk.every
-import io.mockk.excludeRecords
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -43,19 +43,19 @@ class EventServiceTest {
     fun setUp() {
         meterRegistry.clear()
         clearAllMocks()
-        excludeRecords { eventStore.existsById(any()) }
+        coExcludeRecords { eventStore.existsById(any()) }
     }
 
     @Test
     fun `should save a new event`() = runTest {
         val event = createEvent()
         val session = mockk<WebSocketSession>()
-        every { eventStore.existsById(event.id) } returns false
+        coEvery { eventStore.existsById(event.id) } returns false
 
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, true)
 
-        verify { eventStore.save(event) }
+        coVerify { eventStore.save(event) }
         coVerify { subscriptionService.notify(event, session) }
         coVerify { messageSender.send(expectedResult.toJson(), session) }
 
@@ -73,8 +73,8 @@ class EventServiceTest {
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, true)
 
-        verify { eventStore.save(event) }
-        verify { eventStore.deleteAll(event.pubkey, event.referencedEventIds()) }
+        coVerify { eventStore.save(event) }
+        coVerify { eventStore.deleteAll(event.pubkey, event.referencedEventIds()) }
         coVerify { subscriptionService.notify(event, session) }
         coVerify { messageSender.send(expectedResult.toJson(), session) }
 
@@ -92,7 +92,7 @@ class EventServiceTest {
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, true)
 
-        verify { eventStore.save(event) }
+        coVerify { eventStore.save(event) }
         coVerify { eventStore.deleteOldestOfKind(event.pubkey, event.kind) }
         coVerify { subscriptionService.notify(event, session) }
         coVerify { messageSender.send(expectedResult.toJson(), session) }
@@ -125,7 +125,7 @@ class EventServiceTest {
     fun `should handle a error`() = runTest {
         val event = createEvent()
         val session = mockk<WebSocketSession>()
-        every { eventStore.existsById(event.id) } throws IllegalArgumentException("SomeError")
+        coEvery { eventStore.existsById(event.id) } throws IllegalArgumentException("SomeError")
 
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, false, "error: internal error saving the event")
@@ -148,7 +148,7 @@ class EventServiceTest {
     fun `should not save an existing event`(eventFile: String) = runTest {
         val event = createEvent(eventFile)
         val session = mockk<WebSocketSession>()
-        every { eventStore.existsById(event.id) } returns true
+        coEvery { eventStore.existsById(event.id) } returns true
 
         val result = eventService.save(event, session)
         val expectedResult = CommandResult(event.id, true, "duplicate:")
