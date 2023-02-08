@@ -1,15 +1,15 @@
 package com.neutrine.knostr.adapters.ws
 
+import com.neutrine.knostr.await
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.time.withTimeout
 import mu.KotlinLogging
 import java.time.Duration
 
@@ -22,10 +22,8 @@ class MessageSender(
     private val logger = KotlinLogging.logger {}
 
     init {
-        repeat(MESSAGE_PROCESSORS_COUNT) {
-            coroutineScope.launch {
-                launchProcessor()
-            }
+        coroutineScope.launch {
+            startMessageConsumer()
         }
     }
 
@@ -42,10 +40,12 @@ class MessageSender(
         meterRegistry.counter(EVENT_SEND_LATER_SCHEDULED_METRICS).increment()
     }
 
-    private suspend fun launchProcessor() {
+    private suspend fun startMessageConsumer() {
         for (channelMessage in channel) {
-            if (channelMessage.session.sendMessage(channelMessage.message)) {
-                meterRegistry.counter(EVENT_SEND_LATER_METRICS).increment()
+            coroutineScope.launch {
+                if (channelMessage.session.sendMessage(channelMessage.message)) {
+                    meterRegistry.counter(EVENT_SEND_LATER_METRICS).increment()
+                }
             }
         }
     }
@@ -53,11 +53,11 @@ class MessageSender(
     private suspend fun WebSocketSession.sendMessage(message: String): Boolean {
         try {
             if (isOpen) {
-                withTimeout(Duration.ofSeconds(5)) {
-                    send(message).awaitFirstOrNull()
-                }
+                sendAsync(message).await(Duration.ofSeconds(30))
                 return true
             }
+        } catch (e: TimeoutCancellationException) {
+            logger.warn { "Timeout sending message" }
         } catch (e: Exception) {
             logger.error(e) { "Error sending message" }
         }
@@ -69,7 +69,6 @@ class MessageSender(
         const val EVENT_SEND_METRICS = "event.send"
         const val EVENT_SEND_LATER_METRICS = "event.send.later"
         const val EVENT_SEND_LATER_SCHEDULED_METRICS = "event.send.later.scheduled"
-        private const val MESSAGE_PROCESSORS_COUNT = 30
     }
 
     @PreDestroy
