@@ -15,8 +15,7 @@ object EventFilterValidator {
         } else if (filters.any { it.ids.any { id -> id.length < MIN_AUTHOR_LENGTH } }) {
             noticeResult = NoticeResult.invalid("id size must be greater than or equal to $MIN_ID_LENGTH")
         } else if (filters.any { it.searchKeywords.size > MAX_SEARCH_KEYWORDS_COUNT }) {
-            noticeResult =
-                NoticeResult.invalid("searchKeywords size must be less than or equal to $MAX_SEARCH_KEYWORDS_COUNT")
+            noticeResult = NoticeResult.invalid("searchKeywords size must be less than or equal to $MAX_SEARCH_KEYWORDS_COUNT")
         }
 
         return noticeResult

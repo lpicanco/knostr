@@ -1,5 +1,6 @@
 package com.neutrine.knostr.domain
 
+import com.neutrine.knostr.domain.EventFilterValidator.MAX_SEARCH_KEYWORDS_COUNT
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -103,5 +104,15 @@ class EventFilterValidatorTest {
             ids = setOf("55b9055fabe28c51641")
         )
         assertEquals("invalid: id size must be greater than or equal to 20", EventFilterValidator.validate(setOf(filter))?.message)
+    }
+
+    @Test
+    fun `should return a NoticeResult if the searchKeywords count is invalid`() {
+        val searchString = (1..MAX_SEARCH_KEYWORDS_COUNT + 1).map {
+            "keyword$it"
+        }.joinToString(" ")
+
+        val filter = EventFilter(search = searchString)
+        assertEquals("invalid: searchKeywords size must be less than or equal to 2", EventFilterValidator.validate(setOf(filter))?.message)
     }
 }

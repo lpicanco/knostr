@@ -7,6 +7,7 @@ import com.neutrine.knostr.domain.EventService
 import com.neutrine.knostr.domain.SubscriptionService
 import com.neutrine.knostr.getRemoteAddress
 import io.micronaut.core.convert.value.MutableConvertibleValues
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.server.util.HttpClientAddressResolver
 import io.micronaut.websocket.WebSocketSession
 import io.mockk.clearAllMocks
@@ -52,7 +53,7 @@ class RelayTest {
         clearAllMocks()
         every { session.sendAsync(any<String>()) } returns CompletableFuture.completedFuture("")
         every { session.id } returns "SESSION_ID"
-        every { session.attributes } returns MutableConvertibleValues.of(emptyMap())
+        every { session.attributes } returns MutableConvertibleValues.of(mutableMapOf())
 
         excludeRecords { session.id }
         excludeRecords { session.getRemoteAddress() }
@@ -60,9 +61,13 @@ class RelayTest {
 
     @Test
     fun `should open a socket session`() {
-        val response = relay.onOpen(session, null, null)
+        val request = mockk<HttpRequest<*>>(relaxed = true)
+        every { httpClientAddressResolver.resolve(request) } returns "IP_ADDRESS"
+
+        val response = relay.onOpen(session, null, request)
+
         assertNull(response)
-        confirmVerified()
+        verify { httpClientAddressResolver.resolve(request) }
     }
 
     @Test
