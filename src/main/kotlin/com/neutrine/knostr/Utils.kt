@@ -1,6 +1,7 @@
 package com.neutrine.knostr
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.micronaut.websocket.WebSocketSession
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.time.withTimeout
 import java.math.BigInteger
@@ -27,6 +28,14 @@ fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x
 
 fun ByteArray.toSha256(): ByteArray {
     return MessageDigest.getInstance("SHA-256").digest(this)
+}
+
+fun WebSocketSession.putRemoteAddress(remoteAddress: String) {
+    attributes.put("remoteAddress", remoteAddress)
+}
+
+fun WebSocketSession.getRemoteAddress(): String? {
+    return attributes.getValue("remoteAddress")?.toString()
 }
 
 fun String.toSha256(): ByteArray = toByteArray().toSha256()

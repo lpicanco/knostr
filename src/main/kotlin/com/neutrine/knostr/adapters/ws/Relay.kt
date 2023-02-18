@@ -4,12 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.neutrine.knostr.domain.Event
 import com.neutrine.knostr.domain.EventFilter
+import com.neutrine.knostr.domain.EventFilterValidator
 import com.neutrine.knostr.domain.EventService
+import com.neutrine.knostr.domain.NoticeResult
 import com.neutrine.knostr.domain.SubscriptionService
-import com.neutrine.knostr.infra.CoroutineScopeFactory.Companion.COROUTINE_MESSAGE_HANDLER
-import io.micronaut.core.async.publisher.Publishers
+import com.neutrine.knostr.getRemoteAddress
+import com.neutrine.knostr.putRemoteAddress
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Produces
+import io.micronaut.http.server.util.HttpClientAddressResolver
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.websocket.WebSocketSession
 import io.micronaut.websocket.annotation.OnClose
@@ -17,11 +21,8 @@ import io.micronaut.websocket.annotation.OnError
 import io.micronaut.websocket.annotation.OnMessage
 import io.micronaut.websocket.annotation.OnOpen
 import io.micronaut.websocket.annotation.ServerWebSocket
-import jakarta.inject.Named
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.future.asCompletableFuture
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.publish
 import mu.KotlinLogging
 import net.logstash.logback.argument.StructuredArguments.kv
 import org.reactivestreams.Publisher
@@ -31,14 +32,19 @@ class Relay(
     private val eventService: EventService,
     private val subscriptionService: SubscriptionService,
     private val objectMapper: ObjectMapper,
-    @Named(COROUTINE_MESSAGE_HANDLER)
-    private val coroutineScope: CoroutineScope
+    private val httpClientAddressResolver: HttpClientAddressResolver
 ) {
     private val logger = KotlinLogging.logger {}
 
     @OnOpen
     @Produces("application/nostr+json")
-    fun onOpen(session: WebSocketSession?, @Header accept: String?): String? {
+    fun onOpen(session: WebSocketSession?, @Header accept: String?, request: HttpRequest<*>?): String? {
+        if (session != null && request != null) {
+            val remoteAddress = httpClientAddressResolver.resolve(request)
+            session.putRemoteAddress(remoteAddress)
+            logger.info("onOpen", kv("sessionId", session.id))
+        }
+
         return when {
             session != null -> null
             accept == "application/nostr+json" -> NIP11_DATA
@@ -46,30 +52,21 @@ class Relay(
         }
     }
 
-    @OnMessage(maxPayloadLength = Int.MAX_VALUE)
+    @OnMessage(maxPayloadLength = 65536)
     @NewSpan("onMessage")
-    fun onMessage(message: String, session: WebSocketSession): Publisher<Unit> {
-        if (message.length > 65536) {
-            logger.warn("Message too long", kv("size", message.length))
-            session.sendSync("""["NOTICE","invalid: payload size must be less than or equal to 65536"]""")
-            return Publishers.empty()
+    fun onMessage(message: String, session: WebSocketSession): Publisher<Unit> = publish {
+        val messageArguments = objectMapper.readTree(message)
+        if (messageArguments.size() < 2) {
+            session.sendSync(NoticeResult("Unsupported message: $message").toJson())
         }
 
-        val job = coroutineScope.launch(errorHandler) {
-            val messageArguments = objectMapper.readTree(message)
-            if (messageArguments.size() < 2) {
-                throw IllegalArgumentException("Invalid message: $message")
-            }
-
-            when (messageArguments[0].asText()) {
-                "REQ" -> subscribe(messageArguments[1].asText(), messageArguments.drop(2), session)
-                "EVENT" -> processEvent(messageArguments[1], session)
-                "CLOSE" -> unsubscribe(messageArguments[1].asText(), session)
-                else -> throw IllegalArgumentException("Unsupported message: $message")
-            }
+        when (val messageType = messageArguments[0].asText()) {
+            "REQ" -> subscribe(messageArguments[1].asText(), messageArguments.drop(2), session)
+            "EVENT" -> processEvent(messageArguments[1], session)
+            "CLOSE" -> unsubscribe(messageArguments[1].asText(), session)
+            "PING" -> session.sendSync(NoticeResult("PONG").toJson())
+            else -> session.sendSync(NoticeResult("Unsupported message: $messageType").toJson())
         }
-
-        return Publishers.fromCompletableFuture(job.asCompletableFuture())
     }
 
     @OnError
@@ -93,8 +90,15 @@ class Relay(
             filter.copy(tags = tags)
         }.toSet()
 
+        val validationError = EventFilterValidator.validate(filters)
+        if (validationError != null) {
+            session.sendAsync(validationError.toJson()).await()
+            logger.warn("subscribe", kv("invalidMessage", validationError.message), kv("subscriptionId", subscriptionId), kv("filters", filters))
+            return
+        }
+
         subscriptionService.subscribe(subscriptionId, session, filters)
-        logger.info("subscribe", kv("subscriptionId", subscriptionId), kv("filters", filters))
+        logger.info("subscribe", kv("subscriptionId", subscriptionId), kv("sessionId", session.id), kv("filters", filters), kv("remoteAddress", session.getRemoteAddress()))
     }
 
     private suspend fun processEvent(eventNode: JsonNode, session: WebSocketSession) {
@@ -102,9 +106,9 @@ class Relay(
         val result = eventService.save(event, session)
 
         if (logger.isDebugEnabled) {
-            logger.debug("processEvent", kv("event", event), kv("result", result), kv("sessionId", session.id))
+            logger.debug("processEvent", kv("event", event), kv("result", result), kv("sessionId", session.id), kv("remoteAddress", session.getRemoteAddress()))
         } else {
-            logger.info("processEvent", kv("eventId", event.id), kv("result", result), kv("sessionId", session.id))
+            logger.info("processEvent", kv("eventId", event.id), kv("result", result), kv("sessionId", session.id), kv("remoteAddress", session.getRemoteAddress()))
         }
     }
 
@@ -117,10 +121,6 @@ class Relay(
     fun onClose(session: WebSocketSession) {
         subscriptionService.unsubscribeSocketSession(session)
         logger.info("close", kv("sessionId", session.id))
-    }
-
-    val errorHandler = CoroutineExceptionHandler { _, exception ->
-        logger.error("Unexpected error", exception)
     }
 
     companion object {
