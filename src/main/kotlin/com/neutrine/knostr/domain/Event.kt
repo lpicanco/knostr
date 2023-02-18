@@ -69,5 +69,7 @@ data class Event(
             10000 until 20000
         )
         private val KINDS_EVENT_EPHEMERAL = 20000 until 30000
+        const val PUB_KEY_LENGTH = 64
+        const val EVENT_ID_LENGTH = 64
     }
 }

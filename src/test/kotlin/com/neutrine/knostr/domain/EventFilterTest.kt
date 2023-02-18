@@ -133,6 +133,26 @@ class EventFilterTest {
         assertEquals(expected, filter.test(EVENT))
     }
 
+    @ParameterizedTest
+    @CsvSource(
+        "52b9055fabe28c51641bd0230096258f7d6e517910bf99fd3425d1ae507d8c34,TRUE",
+        "52b9055fabe28c51641bd0230096258f7d6e517910bf99fd3425d1ae507d8c3,FALSE",
+        "52b9,FALSE"
+    )
+    fun `should return if an exact match can be used for eventId`(eventId: String, expected: Boolean) {
+        assertEquals(expected, EventFilter.canUseExactMatchForEventId(eventId))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "52b9055fabe28c51641bd0230096258f7d6e517910bf99fd3425d1ae507d8c34,TRUE",
+        "52b9055fabe28c51641bd0230096258f7d6e517910bf99fd3425d1ae507d8c3,FALSE",
+        "52b9,FALSE"
+    )
+    fun `should return if an exact match can be used for pubkey`(pubkey: String, expected: Boolean) {
+        assertEquals(expected, EventFilter.canUseExactMatchForAuthor(pubkey))
+    }
+
     companion object {
         private val EVENT = Event(
             id = "52b9055fabe28c51641bd0230096258f7d6e517910bf99fd3425d1ae507d8c34",
