@@ -3,6 +3,8 @@ package com.neutrine.knostr.adapters.repository.jdbc
 import com.neutrine.knostr.adapters.repository.EventStore
 import com.neutrine.knostr.domain.Event
 import com.neutrine.knostr.domain.EventFilter
+import com.neutrine.knostr.domain.EventFilter.Companion.canUseExactMatchForAuthor
+import com.neutrine.knostr.domain.EventFilter.Companion.canUseExactMatchForEventId
 import io.micronaut.context.annotation.Primary
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
@@ -73,18 +75,46 @@ abstract class EventStorePostgres(
 
         if (filter.ids.isNotEmpty()) {
             predicates.add(
-                filter.ids.joinToString(" OR ", prefix = "(", postfix = ")") { "event_id like ?" }
+                filter.ids.joinToString(" OR ", prefix = "(", postfix = ")") {
+                    if (canUseExactMatchForEventId(it)) {
+                        "event_id = ?"
+                    } else {
+                        "event_id like ?"
+                    }
+                }
             )
 
-            parameters.addAll(filter.ids.map { "$it%" })
+            parameters.addAll(
+                filter.ids.map {
+                    if (canUseExactMatchForEventId(it)) {
+                        it
+                    } else {
+                        "$it%"
+                    }
+                }
+            )
         }
 
         if (filter.authors.isNotEmpty()) {
             predicates.add(
-                filter.authors.joinToString(" OR ", prefix = "(", postfix = ")") { "pubkey like ?" }
+                filter.authors.joinToString(" OR ", prefix = "(", postfix = ")") {
+                    if (canUseExactMatchForAuthor(it)) {
+                        "pubkey = ?"
+                    } else {
+                        "pubkey like ?"
+                    }
+                }
             )
 
-            parameters.addAll(filter.authors.map { "$it%" })
+            parameters.addAll(
+                filter.authors.map {
+                    if (canUseExactMatchForAuthor(it)) {
+                        it
+                    } else {
+                        "$it%"
+                    }
+                }
+            )
         }
 
         if (filter.searchKeywords.isNotEmpty()) {

@@ -1,5 +1,7 @@
 package com.neutrine.knostr.domain
 
+import com.neutrine.knostr.domain.Event.Companion.EVENT_ID_LENGTH
+import com.neutrine.knostr.domain.Event.Companion.PUB_KEY_LENGTH
 import java.util.function.Predicate
 
 data class EventFilter(
@@ -72,5 +74,13 @@ data class EventFilter(
 
     companion object {
         val TOKENIZE_REGEX = "[^a-zA-Z0-9]".toRegex()
+
+        fun canUseExactMatchForAuthor(pubkey: String): Boolean {
+            return pubkey.length == PUB_KEY_LENGTH
+        }
+
+        fun canUseExactMatchForEventId(eventId: String): Boolean {
+            return eventId.length == EVENT_ID_LENGTH
+        }
     }
 }
