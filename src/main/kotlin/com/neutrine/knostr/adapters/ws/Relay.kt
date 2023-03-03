@@ -9,6 +9,7 @@ import com.neutrine.knostr.domain.EventService
 import com.neutrine.knostr.domain.NoticeResult
 import com.neutrine.knostr.domain.SubscriptionService
 import com.neutrine.knostr.getRemoteAddress
+import com.neutrine.knostr.infra.LimitsService
 import com.neutrine.knostr.putRemoteAddress
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Header
@@ -32,7 +33,8 @@ class Relay(
     private val eventService: EventService,
     private val subscriptionService: SubscriptionService,
     private val objectMapper: ObjectMapper,
-    private val httpClientAddressResolver: HttpClientAddressResolver
+    private val httpClientAddressResolver: HttpClientAddressResolver,
+    private val limitsService: LimitsService
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -55,9 +57,16 @@ class Relay(
     @OnMessage(maxPayloadLength = 65536)
     @NewSpan("onMessage")
     fun onMessage(message: String, session: WebSocketSession): Publisher<Unit> = publish {
+        val ip = session.getRemoteAddress()
+        if (limitsService.isIpBlocked(ip)) {
+            session.sendAsync(NoticeResult.blocked("IP blocked").toJson())
+            return@publish
+        }
+
         val messageArguments = objectMapper.readTree(message)
         if (messageArguments.size() < 2) {
             session.sendSync(NoticeResult("Unsupported message: $message").toJson())
+            return@publish
         }
 
         when (val messageType = messageArguments[0].asText()) {

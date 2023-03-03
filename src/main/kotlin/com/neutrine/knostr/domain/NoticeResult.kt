@@ -7,5 +7,6 @@ data class NoticeResult(val message: String) {
 
     companion object {
         fun invalid(message: String) = NoticeResult("invalid: $message")
+        fun blocked(message: String) = NoticeResult("blocked: $message")
     }
 }

@@ -23,6 +23,7 @@ dependencies {
     implementation("io.micronaut:micronaut-http-client")
     implementation("io.micronaut:micronaut-jackson-databind")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
+    implementation("io.micronaut.cache:micronaut-cache-caffeine")
 
     implementation("io.micronaut.data:micronaut-data-jdbc")
     runtimeOnly("io.micronaut.sql:micronaut-jdbc-hikari") // ?

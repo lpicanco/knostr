@@ -6,6 +6,7 @@ import com.neutrine.knostr.domain.EventFilter
 import com.neutrine.knostr.domain.EventService
 import com.neutrine.knostr.domain.SubscriptionService
 import com.neutrine.knostr.getRemoteAddress
+import com.neutrine.knostr.infra.LimitsService
 import io.micronaut.core.convert.value.MutableConvertibleValues
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.server.util.HttpClientAddressResolver
@@ -21,7 +22,6 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -40,8 +40,10 @@ class RelayTest {
     private lateinit var subscriptionService: SubscriptionService
     @MockK(relaxed = true)
     private lateinit var httpClientAddressResolver: HttpClientAddressResolver
+    @MockK(relaxed = true)
+    private lateinit var limitsService: LimitsService
+
     private val objectMapper = jacksonObjectMapper()
-    private val testScope = TestScope()
 
     private val session = mockk<WebSocketSession>(relaxed = false)
 
@@ -57,6 +59,7 @@ class RelayTest {
 
         excludeRecords { session.id }
         excludeRecords { session.getRemoteAddress() }
+        excludeRecords { limitsService.isIpBlocked(any()) }
     }
 
     @Test
@@ -96,6 +99,17 @@ class RelayTest {
     fun `should notify a NOTICE for invalid filters`() = runTest {
         relay.onMessage("""["REQ", "CID", {"ids": ["2e"]}]""", session).awaitFirstOrNull()
         val expectedResult = """["NOTICE","invalid: id size must be greater than or equal to 20"]"""
+
+        verify { session.sendAsync(expectedResult) }
+        confirmVerified()
+    }
+
+    @Test
+    fun `should notify a NOTICE for a blocked IP`() = runTest {
+        every { limitsService.isIpBlocked(any()) } returns true
+
+        relay.onMessage("""["REQ", "CID", {"ids": ["433343242343334324234333432423"]}]""", session).awaitFirstOrNull()
+        val expectedResult = """["NOTICE","blocked: IP blocked"]"""
 
         verify { session.sendAsync(expectedResult) }
         confirmVerified()
