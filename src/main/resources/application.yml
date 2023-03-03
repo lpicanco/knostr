@@ -11,6 +11,9 @@ micronaut:
     enabled: true
   otel:
     enabled: false
+  caches:
+    limit-list:
+      expire-after-write: 10m
 
 endpoints:
   all:
@@ -41,3 +44,8 @@ flyway:
   datasources:
     default:
       enabled: true
+
+---
+limits:
+  enabled: false
+  external-file-location: ./limits.yml
