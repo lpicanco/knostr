@@ -6,7 +6,7 @@
 
 # Knostr
 
-Nostr Relay Implementation
+Nostr Relay Implementation in Kotlin
 [wss://knostr.neutrine.com](wss://knostr.neutrine.com)
 
 ## Implemented NIPs
